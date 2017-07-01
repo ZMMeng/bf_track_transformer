@@ -29,6 +29,14 @@ public class IpSeekerExt extends IPSeeker {
             }
             info = info.trim();
 
+            //局域网的情况
+            if("局域网".equals(info)){
+                result.setCountry("中国");
+                result.setProvince("上海市");
+                result.setCity("上海市");
+                return result;
+            }
+
             int provinceIndex;
             int cityIndex;
             if (info.contains("省")) {
