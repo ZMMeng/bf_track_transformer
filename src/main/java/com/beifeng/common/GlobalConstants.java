@@ -28,7 +28,6 @@ public class GlobalConstants {
     public static final String DEFAULT_JDBC_BATCH_NUMBER = "500";
     //指定连接表配置为report
     public static final String WAREHOUSE_OF_REPORT = "report";
-
-
-
+    //一天的总毫秒数
+    public static final long MILLISECONDS_OF_DAY = 24 * 60 * 60 * 1000;
 }

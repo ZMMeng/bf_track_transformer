@@ -7,6 +7,8 @@ package com.beifeng.common;
  */
 public class EventLogConstants {
 
+
+
     /**
      * 事件枚举类，指定事件的名称
      */
@@ -110,6 +112,8 @@ public class EventLogConstants {
     public static final String LOG_COLUMN_NAME_CURRENCY_TYPE = "cut";
     //支付方式
     public static final String LOG_COLUMN_NAME_PAYMENT_TYPE = "pt";
+    //平台名称
+    public static final String LOG_COLUMN_NAME_PLATFORM = "pl";
     //自定义事件名称
     public static final String LOG_COLUMN_NAME_CATEGORY = "ca";
     //自定义事件动作
