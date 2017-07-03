@@ -1,5 +1,6 @@
 package com.beifeng.etl.utils;
 
+import com.beifeng.common.GlobalConstants;
 import com.beifeng.etl.utils.ip.IPSeeker;
 
 /**
@@ -28,6 +29,15 @@ public class IpSeekerExt extends IPSeeker {
                 return result;
             }
             info = info.trim();
+
+
+            //局域网的情况
+            if ("局域网".equals(info)) {
+                result.setCountry("中国");
+                result.setProvince("上海市");
+                result.setCity("上海市");
+                return result;
+            }
 
             int provinceIndex;
             int cityIndex;
@@ -128,7 +138,8 @@ public class IpSeekerExt extends IPSeeker {
      */
     public static class RegionInfo {
         //默认值
-        private static final String DEFAULT_VALUE = "unknown";
+        private static final String DEFAULT_VALUE = GlobalConstants.DEFAULT_VALUE;
+
         //国家名称
         private String country = DEFAULT_VALUE;
         //省份名称
@@ -158,6 +169,16 @@ public class IpSeekerExt extends IPSeeker {
 
         public void setCity(String city) {
             this.city = city;
+        }
+
+
+        @Override
+        public String toString() {
+            return "RegionInfo{" +
+                    "country='" + country + '\'' +
+                    ", province='" + province + '\'' +
+                    ", city='" + city + '\'' +
+                    '}';
         }
     }
 }
