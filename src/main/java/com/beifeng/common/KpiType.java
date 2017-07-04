@@ -13,7 +13,11 @@ public enum KpiType {
     //统计活跃用户KPI
     ACTIVE_USER("active_user"),
     //统计浏览器维度的活跃用户KPI
-    BROWSER_ACTIVE_USER("browser_active_user");
+    BROWSER_ACTIVE_USER("browser_active_user"),
+    //统计活跃会员KPI
+    ACTIVE_MEMBER("active_member"),
+    //统计浏览器维度的活跃会员KPI
+    BROWSER_ACTIVE_MEMBER("browser_active_member");
 
     public final String name;
 

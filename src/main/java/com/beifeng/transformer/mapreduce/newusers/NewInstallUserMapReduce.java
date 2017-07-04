@@ -235,8 +235,7 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
                 (EventLogConstants.HBASE_COLUMN_FAMILY_NAME), Bytes.toBytes
                 (EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME), CompareFilter
                 .CompareOp.EQUAL, Bytes
-                .toBytes
-                        (EventLogConstants.EventEnum.LAUNCH.getAlias())));
+                .toBytes(EventLogConstants.EventEnum.LAUNCH.getAlias())));
         //Map任务需要获取的列名
         String[] columns = {EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME,
                 EventLogConstants.LOG_COLUMN_NAME_UUID, EventLogConstants

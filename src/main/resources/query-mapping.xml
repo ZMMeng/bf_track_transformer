@@ -49,4 +49,27 @@
             ) values (?,?,?,?,?) on duplicate key update active_users=?
         </value>
     </property>
+    <property>
+        <name>active_member</name>
+        <value>
+            insert into stats_user (
+            platform_dimension_id,
+            date_dimension_id,
+            active_members,
+            created
+            ) values (?,?,?,?) on duplicate key update active_members=?
+        </value>
+    </property>
+    <property>
+        <name>browser_active_member</name>
+        <value>
+            insert into stats_device_browser (
+            platform_dimension_id,
+            date_dimension_id,
+            browser_dimension_id,
+            active_members,
+            created
+            ) values (?,?,?,?,?) on duplicate key update active_members=?
+        </value>
+    </property>
 </configuration>

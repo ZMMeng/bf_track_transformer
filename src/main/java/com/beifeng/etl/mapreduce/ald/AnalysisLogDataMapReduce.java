@@ -59,8 +59,7 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
 
             try {
                 //解析日志
-                Map<String, String> clientInfo = LoggerUtil.handleLog(value
-                        .toString());
+                Map<String, String> clientInfo = LoggerUtil.handleLog(value.toString());
                 if (clientInfo.isEmpty()) {
                     //如果日志解析结果为空，将该条记录过滤，过滤记录数自增，直接返回
                     filterRecords++;
