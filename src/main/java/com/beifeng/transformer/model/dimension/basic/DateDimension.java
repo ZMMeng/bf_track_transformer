@@ -1,4 +1,4 @@
-package com.beifeng.transformer.model.dim.base;
+package com.beifeng.transformer.model.dimension.basic;
 
 import com.beifeng.common.DateEnum;
 import com.beifeng.utils.TimeUtil;

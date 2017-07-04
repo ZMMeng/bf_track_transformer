@@ -1,4 +1,4 @@
-package com.beifeng.transformer.mr.tu;
+package com.beifeng.transformer.mapreduce.totalusers;
 
 import com.beifeng.common.DateEnum;
 import com.beifeng.common.GlobalConstants;

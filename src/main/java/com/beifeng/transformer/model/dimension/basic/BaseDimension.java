@@ -1,4 +1,4 @@
-package com.beifeng.transformer.model.dim.base;
+package com.beifeng.transformer.model.dimension.basic;
 
 import org.apache.hadoop.io.WritableComparable;
 

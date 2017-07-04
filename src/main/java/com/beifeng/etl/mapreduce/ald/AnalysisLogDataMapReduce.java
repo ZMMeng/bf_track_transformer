@@ -1,4 +1,4 @@
-package com.beifeng.etl.mr.ald;
+package com.beifeng.etl.mapreduce.ald;
 
 import com.beifeng.common.EventLogConstants;
 import com.beifeng.common.GlobalConstants;

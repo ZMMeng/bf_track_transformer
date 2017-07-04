@@ -1,4 +1,4 @@
-package com.beifeng.transformer.model.dim.base;
+package com.beifeng.transformer.model.dimension.basic;
 
 import java.io.DataInput;
 import java.io.DataOutput;

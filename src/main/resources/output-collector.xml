@@ -4,10 +4,18 @@
 <configuration>
     <property>
         <name>collector_new_install_user</name>
-        <value>com.beifeng.transformer.mr.nu.StatsUserNewInstallUserCollector</value>
+        <value>com.beifeng.transformer.mapreduce.newusers.StatsUserNewInstallUserCollector</value>
     </property>
     <property>
         <name>collector_browser_new_install_user</name>
-        <value>com.beifeng.transformer.mr.nu.StatsDeviceNewInstallUserCollector</value>
+        <value>com.beifeng.transformer.mapreduce.newusers.StatsDeviceNewInstallUserCollector</value>
+    </property>
+    <property>
+        <name>collector_active_user</name>
+        <value>com.beifeng.transformer.mapreduce.activeusers.StatsUsersActiveUserCollector</value>
+    </property>
+    <property>
+        <name>collector_browser_active_user</name>
+        <value>com.beifeng.transformer.mapreduce.activeusers.StatsDeviceActiveUserCollector</value>
     </property>
 </configuration>

@@ -1,4 +1,4 @@
-package com.beifeng.transformer.mr;
+package com.beifeng.transformer.mapreduce;
 
 import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.model.value.BaseStatsValueWritable;

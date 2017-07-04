@@ -1,4 +1,4 @@
-package com.beifeng.transformer.mr;
+package com.beifeng.transformer.mapreduce;
 
 import com.beifeng.common.GlobalConstants;
 import com.beifeng.common.KpiType;

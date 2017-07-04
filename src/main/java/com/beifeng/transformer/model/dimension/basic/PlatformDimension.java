@@ -1,4 +1,4 @@
-package com.beifeng.transformer.model.dim.base;
+package com.beifeng.transformer.model.dimension.basic;
 
 import com.beifeng.common.GlobalConstants;
 import org.apache.commons.lang.StringUtils;

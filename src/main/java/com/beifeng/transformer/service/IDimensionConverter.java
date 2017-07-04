@@ -1,6 +1,6 @@
 package com.beifeng.transformer.service;
 
-import com.beifeng.transformer.model.dim.base.BaseDimension;
+import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 
 import java.io.IOException;
 

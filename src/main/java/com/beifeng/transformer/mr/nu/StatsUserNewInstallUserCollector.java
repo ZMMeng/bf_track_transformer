@@ -1,8 +1,8 @@
 package com.beifeng.transformer.mr.nu;
 
 import com.beifeng.common.GlobalConstants;
-import com.beifeng.transformer.model.dim.StatsUserDimension;
-import com.beifeng.transformer.model.dim.base.BaseDimension;
+import com.beifeng.transformer.model.dimension.StatsUserDimension;
+import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.model.value.BaseStatsValueWritable;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
 import com.beifeng.transformer.mr.IOutputCollector;

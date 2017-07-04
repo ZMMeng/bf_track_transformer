@@ -1,6 +1,6 @@
-package com.beifeng.transformer.model.dim;
+package com.beifeng.transformer.model.dimension;
 
-import com.beifeng.transformer.model.dim.base.BaseDimension;
+import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 
 /**
  * Created by 蒙卓明 on 2017/7/2.

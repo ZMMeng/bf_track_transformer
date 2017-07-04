@@ -1,4 +1,4 @@
-package com.beifeng.transformer.mr.nu;
+package com.beifeng.transformer.mapreduce.newusers;
 
 import com.beifeng.common.DateEnum;
 import com.beifeng.common.EventLogConstants;
@@ -12,9 +12,8 @@ import com.beifeng.transformer.model.dimension.basic.KpiDimension;
 import com.beifeng.transformer.model.dimension.basic.PlatformDimension;
 import com.beifeng.transformer.model.value.map.TimeOutputValue;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
-import com.beifeng.transformer.mr.TransformerOutputFormat;
-import com.beifeng.transformer.mr.tu.TotalInstallUserCalculate;
-import com.beifeng.utils.JdbcManager;
+import com.beifeng.transformer.mapreduce.TransformerOutputFormat;
+import com.beifeng.transformer.mapreduce.totalusers.TotalInstallUserCalculate;
 import com.beifeng.utils.TimeUtil;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
@@ -37,12 +36,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.sql.*;
-import java.sql.Date;
 import java.util.*;
 
 /**
- * 自定义的计算新增用户的MapReduce类
+ * 自定义的统计新增用户的MapReduce类
  * Created by 蒙卓明 on 2017/7/2.
  */
 public class NewInstallUserMapReduce extends Configured implements Tool {
@@ -57,12 +54,14 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
         //日志打印对象
         private static final Logger logger = Logger.getLogger(NewInstallUserMapper.class);
         //Map输出键对象
-        private StatsUserDimension statsUserDimension = new StatsUserDimension();
+        private StatsUserDimension mapOutputKey = new StatsUserDimension();
         //Map输出值对象
-        private TimeOutputValue timeOutputValue = new TimeOutputValue();
+        private TimeOutputValue mapOutputValue = new TimeOutputValue();
         //HBase表列簇的二进制数据
         private byte[] family = Bytes.toBytes(EventLogConstants.HBASE_COLUMN_FAMILY_NAME);
+        //用户基本信息分析模块的KPI维度信息
         private KpiDimension newInstallUserKpi = new KpiDimension(KpiType.NEW_INSTALL_USER.name);
+        //浏览器基本信息分析模块的KPI维度信息
         private KpiDimension newInstallUserOfBrowserKpi = new KpiDimension(KpiType.BROWSER_NEW_INSTALL_USER
                 .name);
 
@@ -73,32 +72,32 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
             String uuid = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
                     .LOG_COLUMN_NAME_UUID)));
             //从HBase表中读取服务器时间
-            String serverTime = Bytes.toString(value.getValue(family, Bytes
-                    .toBytes(EventLogConstants.LOG_COLUMN_NAME_SERVER_TIME)));
+            String serverTime = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+                    .LOG_COLUMN_NAME_SERVER_TIME)));
             //从HBase表中读取平台信息
-            String platform = Bytes.toString(value.getValue(family, Bytes
-                    .toBytes(EventLogConstants.LOG_COLUMN_NAME_PLATFORM)));
+            String platform = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+                    .LOG_COLUMN_NAME_PLATFORM)));
 
-            //判断UUID、serverTime以及platform是否为空
-            if (StringUtils.isBlank(uuid) || StringUtils.isBlank(serverTime)
-                    || StringUtils.isBlank(platform)) {
+            //过滤无效数据，UUID、服务器时间和平台信息有任意一个为空或者服务器时间非数字，则视该条记录为无效记录
+            if (StringUtils.isBlank(uuid) || StringUtils.isBlank(serverTime) || !StringUtils.isNumeric
+                    (serverTime.trim()) || StringUtils.isBlank(platform)) {
                 //上述变量只要有一个为空，直接返回
-                logger.warn("UUID、服务器时间以及平台信息不能为空");
+                logger.warn("UUID、服务器时间以及平台信息不能为空，服务器时间必须是数字");
                 return;
             }
 
             //将服务器时间字符串转化为时间戳
-            long longOfTime = Long.valueOf(serverTime);
+            long longOfTime = Long.valueOf(serverTime.trim());
             //设置Map输出值对象timeOutputValue的属性值
-            timeOutputValue.setId(uuid);
-            timeOutputValue.setTimestamp(longOfTime);
+            mapOutputValue.setId(uuid);
+            mapOutputValue.setTimestamp(longOfTime);
 
             DateDimension dateDimension = DateDimension.buildDate(longOfTime, DateEnum.DAY);
-            DateDimension dateDimensionOfMonth = DateDimension.buildDate(longOfTime, DateEnum.MONTH);
+            //DateDimension dateDimensionOfMonth = DateDimension.buildDate(longOfTime, DateEnum.MONTH);
             List<PlatformDimension> platformDimensions = PlatformDimension.buildList(platform);
             //设置Map输出对象的date维度
 
-            StatsCommonDimension statsCommonDimension = statsUserDimension.getStatsCommon();
+            StatsCommonDimension statsCommonDimension = mapOutputKey.getStatsCommon();
             statsCommonDimension.setDate(dateDimension);
 
             //写browser相关的信息
@@ -113,16 +112,16 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
             //Map输出
             for (PlatformDimension pf : platformDimensions) {
                 //清空statsUserDimension中BrowserDimension的内容
-                statsUserDimension.getBrowser().clean();
+                mapOutputKey.getBrowser().clean();
                 statsCommonDimension.setKpi(newInstallUserKpi);
                 statsCommonDimension.setPlatform(pf);
-                context.write(statsUserDimension, timeOutputValue);
+                context.write(mapOutputKey, mapOutputValue);
                 for (BrowserDimension bf : browserDimensions) {
                     statsCommonDimension.setKpi(newInstallUserOfBrowserKpi);
                     //由于需要进行clean操作，故将该值复制后填充
-                    statsUserDimension.setBrowser(WritableUtils.clone(bf,
+                    mapOutputKey.setBrowser(WritableUtils.clone(bf,
                             context.getConfiguration()));
-                    context.write(statsUserDimension, timeOutputValue);
+                    context.write(mapOutputKey, mapOutputValue);
                 }
             }
         }
@@ -137,14 +136,12 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
         private Set<String> unique = new HashSet<String>();
 
         @Override
-        protected void reduce(StatsUserDimension key,
-                              Iterable<TimeOutputValue> values, Context
-                                      context) throws IOException,
-                InterruptedException {
-
+        protected void reduce(StatsUserDimension key, Iterable<TimeOutputValue> values, Context context)
+                throws IOException, InterruptedException {
             //清空unique
             unique.clear();
             //开始计算UUID个数
+            //将UUID添加到unique集合中，以便统计UUID的去重个数
             for (TimeOutputValue value : values) {
                 unique.add(value.getId());
             }
@@ -152,15 +149,16 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
             map.put(new IntWritable(-1), new IntWritable(unique.size()));
             outputValue.setValue(map);
 
-            //获取KPI名称
-            String kpiName = key.getStatsCommon().getKpi().getKpiName();
+            //设置KPI
+            /*String kpiName = key.getStatsCommon().getKpi().getKpiName();
             if (KpiType.NEW_INSTALL_USER.name.equals(kpiName)) {
                 //计算stats_user表中的新增用户
                 outputValue.setKpi(KpiType.NEW_INSTALL_USER);
             } else if (KpiType.BROWSER_NEW_INSTALL_USER.name.equals(kpiName)) {
                 //计算stats_device_browser中的新增用户
                 outputValue.setKpi(KpiType.BROWSER_NEW_INSTALL_USER);
-            }
+            }*/
+            outputValue.setKpi(KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName()));
 
             context.write(key, outputValue);
 
@@ -192,10 +190,8 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
         job.setOutputKeyClass(StatsUserDimension.class);
         job.setOutputValueClass(MapWritableValue.class);*/
         //本地运行
-        TableMapReduceUtil.initTableMapperJob(initScan(job),
-                NewInstallUserMapper
-                        .class, StatsUserDimension.class, TimeOutputValue
-                        .class, job, false);
+        TableMapReduceUtil.initTableMapperJob(initScan(job), NewInstallUserMapper.class, StatsUserDimension
+                .class, TimeOutputValue.class, job, false);
         job.setReducerClass(NewInstallUserReducer.class);
         job.setOutputKeyClass(StatsUserDimension.class);
         job.setOutputValueClass(MapWritableValue.class);
@@ -211,7 +207,7 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
     }
 
     /**
-     * 初识化Scan集合
+     * 初始化Scan集合
      *
      * @param job Scan集合所属的MapReduce Job
      * @return Scan集合

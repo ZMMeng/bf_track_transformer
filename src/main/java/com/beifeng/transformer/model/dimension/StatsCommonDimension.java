@@ -1,9 +1,9 @@
-package com.beifeng.transformer.model.dim;
+package com.beifeng.transformer.model.dimension;
 
-import com.beifeng.transformer.model.dim.base.BaseDimension;
-import com.beifeng.transformer.model.dim.base.DateDimension;
-import com.beifeng.transformer.model.dim.base.KpiDimension;
-import com.beifeng.transformer.model.dim.base.PlatformDimension;
+import com.beifeng.transformer.model.dimension.basic.BaseDimension;
+import com.beifeng.transformer.model.dimension.basic.DateDimension;
+import com.beifeng.transformer.model.dimension.basic.KpiDimension;
+import com.beifeng.transformer.model.dimension.basic.PlatformDimension;
 
 import java.io.DataInput;
 import java.io.DataOutput;

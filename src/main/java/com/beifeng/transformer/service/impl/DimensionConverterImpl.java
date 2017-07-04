@@ -1,9 +1,9 @@
 package com.beifeng.transformer.service.impl;
 
-import com.beifeng.transformer.model.dim.base.BaseDimension;
-import com.beifeng.transformer.model.dim.base.BrowserDimension;
-import com.beifeng.transformer.model.dim.base.DateDimension;
-import com.beifeng.transformer.model.dim.base.PlatformDimension;
+import com.beifeng.transformer.model.dimension.basic.BaseDimension;
+import com.beifeng.transformer.model.dimension.basic.BrowserDimension;
+import com.beifeng.transformer.model.dimension.basic.DateDimension;
+import com.beifeng.transformer.model.dimension.basic.PlatformDimension;
 import com.beifeng.transformer.service.IDimensionConverter;
 import org.apache.log4j.Logger;
 

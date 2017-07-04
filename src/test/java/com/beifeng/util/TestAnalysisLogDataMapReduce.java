@@ -1,6 +1,6 @@
 package com.beifeng.util;
 
-import com.beifeng.etl.mr.ald.AnalysisLogDataMapReduce;
+import com.beifeng.etl.mapreduce.ald.AnalysisLogDataMapReduce;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;

@@ -1,9 +1,8 @@
-package com.beifeng.transformer.model.dim.base;
+package com.beifeng.transformer.model.dimension.basic;
 
 import com.beifeng.common.GlobalConstants;
 import org.apache.commons.lang.StringUtils;
 
-import java.awt.*;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
