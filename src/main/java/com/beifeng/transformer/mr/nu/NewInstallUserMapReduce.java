@@ -13,6 +13,7 @@ import com.beifeng.transformer.model.dim.base.PlatformDimension;
 import com.beifeng.transformer.model.value.map.TimeOutputValue;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
 import com.beifeng.transformer.mr.TransformerOutputFormat;
+import com.beifeng.transformer.mr.tu.TotalInstallUserCalculate;
 import com.beifeng.utils.JdbcManager;
 import com.beifeng.utils.TimeUtil;
 import com.google.common.collect.Lists;
@@ -51,31 +52,26 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
             (NewInstallUserMapReduce.class);
     private static final Configuration conf = HBaseConfiguration.create();
 
-    public static class NewInstallUserMapper extends
-            TableMapper<StatsUserDimension, TimeOutputValue> {
+    public static class NewInstallUserMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {
 
         //日志打印对象
-        private static final Logger logger = Logger.getLogger
-                (NewInstallUserMapper.class);
+        private static final Logger logger = Logger.getLogger(NewInstallUserMapper.class);
         //Map输出键对象
-        private StatsUserDimension statsUserDimension = new
-                StatsUserDimension();
+        private StatsUserDimension statsUserDimension = new StatsUserDimension();
         //Map输出值对象
         private TimeOutputValue timeOutputValue = new TimeOutputValue();
         //HBase表列簇的二进制数据
-        private byte[] family = Bytes.toBytes(EventLogConstants
-                .HBASE_COLUMN_FAMILY_NAME);
-        private KpiDimension newInstallUserKpi = new KpiDimension(KpiType
-                .NEW_INSTALL_USER.name);
-        private KpiDimension newInstallUserOfBrowserKpi = new KpiDimension
-                (KpiType.BROWSER_NEW_INSTALL_USER.name);
+        private byte[] family = Bytes.toBytes(EventLogConstants.HBASE_COLUMN_FAMILY_NAME);
+        private KpiDimension newInstallUserKpi = new KpiDimension(KpiType.NEW_INSTALL_USER.name);
+        private KpiDimension newInstallUserOfBrowserKpi = new KpiDimension(KpiType.BROWSER_NEW_INSTALL_USER
+                .name);
 
         @Override
-        protected void map(ImmutableBytesWritable key, Result value, Context
-                context) throws IOException, InterruptedException {
+        protected void map(ImmutableBytesWritable key, Result value, Context context) throws IOException,
+                InterruptedException {
             //从HBase表中读取UUID
-            String uuid = Bytes.toString(value.getValue(family, Bytes.toBytes
-                    (EventLogConstants.LOG_COLUMN_NAME_UUID)));
+            String uuid = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+                    .LOG_COLUMN_NAME_UUID)));
             //从HBase表中读取服务器时间
             String serverTime = Bytes.toString(value.getValue(family, Bytes
                     .toBytes(EventLogConstants.LOG_COLUMN_NAME_SERVER_TIME)));
@@ -97,27 +93,22 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
             timeOutputValue.setId(uuid);
             timeOutputValue.setTimestamp(longOfTime);
 
-            DateDimension dateDimension = DateDimension.buildDate(longOfTime,
-                    DateEnum.DAY);
-            DateDimension dateDimensionOfMonth = DateDimension.buildDate
-                    (longOfTime, DateEnum.MONTH);
-            List<PlatformDimension> platformDimensions = PlatformDimension
-                    .buildList(platform);
+            DateDimension dateDimension = DateDimension.buildDate(longOfTime, DateEnum.DAY);
+            DateDimension dateDimensionOfMonth = DateDimension.buildDate(longOfTime, DateEnum.MONTH);
+            List<PlatformDimension> platformDimensions = PlatformDimension.buildList(platform);
             //设置Map输出对象的date维度
 
-            StatsCommonDimension statsCommonDimension = statsUserDimension
-                    .getStatsCommon();
+            StatsCommonDimension statsCommonDimension = statsUserDimension.getStatsCommon();
             statsCommonDimension.setDate(dateDimension);
 
             //写browser相关的信息
             //从HBase表中读取浏览器的名称以及版本号，这两个值可以为空
-            String browserName = Bytes.toString(value.getValue(family, Bytes
-                    .toBytes(EventLogConstants.LOG_COLUMN_NAME_BROWSER_NAME)));
-            String browserVersion = Bytes.toString(value.getValue(family,
-                    Bytes.toBytes(EventLogConstants
-                            .LOG_COLUMN_NAME_BROWSER_VERSION)));
-            List<BrowserDimension> browserDimensions = BrowserDimension
-                    .buildList(browserName, browserVersion);
+            String browserName = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+                    .LOG_COLUMN_NAME_BROWSER_NAME)));
+            String browserVersion = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+                    .LOG_COLUMN_NAME_BROWSER_VERSION)));
+            List<BrowserDimension> browserDimensions = BrowserDimension.buildList(browserName,
+                    browserVersion);
 
             //Map输出
             for (PlatformDimension pf : platformDimensions) {
@@ -137,9 +128,8 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
         }
     }
 
-    public static class NewInstallUserReducer extends
-            Reducer<StatsUserDimension, TimeOutputValue, StatsUserDimension,
-                    MapWritableValue> {
+    public static class NewInstallUserReducer extends Reducer<StatsUserDimension, TimeOutputValue,
+            StatsUserDimension, MapWritableValue> {
 
         //Reduce输出值对象
         private MapWritableValue outputValue = new MapWritableValue();
@@ -210,123 +200,14 @@ public class NewInstallUserMapReduce extends Configured implements Tool {
         job.setOutputKeyClass(StatsUserDimension.class);
         job.setOutputValueClass(MapWritableValue.class);
         job.setOutputFormatClass(TransformerOutputFormat.class);
-        return job.waitForCompletion(true) ? 0 : 1;
-    }
-
-    /**
-     * 计算总用户
-     *
-     * @param conf
-     */
-    private void calculateTotalUsers(Configuration conf) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        long date = TimeUtil.parseString2Long(conf.get(GlobalConstants
-                .RUNNING_DATE_PARAMS));
-        //获取当天的日期维度信息
-        DateDimension todayDimension = DateDimension.buildDate(date, DateEnum
-                .DAY);
-        //获取前一天的日期维度信息
-        DateDimension yesterdayDimension = DateDimension.buildDate(date -
-                GlobalConstants.MILLISECONDS_OF_DAY, DateEnum.DAY);
-
-        int yesterdayDimensionId = -1;
-        int todayDimensionId = -1;
-
-        //第一步：获取日期id
-        try {
-            conn = JdbcManager.getConnection(conf, GlobalConstants
-                    .WAREHOUSE_OF_REPORT);
-            //获取前一天的日期id
-            pstmt = conn.prepareStatement("select id from dimension_date " +
-                    "where year=? and season=? and month=? and week=? and " +
-                    "day=? and type=? and calendar=?");
-            int i = 0;
-            pstmt.setInt(++i, yesterdayDimension.getYear());
-            pstmt.setInt(++i, yesterdayDimension.getSeason());
-            pstmt.setInt(++i, yesterdayDimension.getMonth());
-            pstmt.setInt(++i, yesterdayDimension.getWeek());
-            pstmt.setInt(++i, yesterdayDimension.getDay());
-            pstmt.setString(++i, yesterdayDimension.getType());
-            pstmt.setDate(++i, new Date(yesterdayDimension
-                    .getCalender().getTime()));
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                yesterdayDimensionId = rs.getInt(1);
-            }
-
-            //获取当天的日期id
-            pstmt = conn.prepareStatement("select id from dimension_date " +
-                    "where year=? and season=? and month=? and week=? and " +
-                    "day=? and type=? and calendar=?");
-            i = 0;
-            pstmt.setInt(++i, todayDimension.getYear());
-            pstmt.setInt(++i, todayDimension.getSeason());
-            pstmt.setInt(++i, todayDimension.getMonth());
-            pstmt.setInt(++i, todayDimension.getWeek());
-            pstmt.setInt(++i, todayDimension.getDay());
-            pstmt.setString(++i, todayDimension.getType());
-            pstmt.setDate(++i, new Date(todayDimension.getCalender().getTime
-                    ()));
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                todayDimensionId = rs.getInt(1);
-            }
-
-            //第二步：获取前一天的原始数据，存储格式为dateid_platformid = totalusers
-            Map<String, Integer> oldValueMap = new HashMap<String, Integer>();
-            //开始更新stats_user
-            if (yesterdayDimensionId > -1) {
-                pstmt = conn.prepareStatement("select platform_dimension_id," +
-                        "total_install_users from stats_user where " +
-                        "date_dimension_id=?");
-                pstmt.setInt(1, yesterdayDimensionId);
-                rs = pstmt.executeQuery();
-                while (rs.next()) {
-                    int platformId = rs.getInt("platform_dimension_id");
-                    int totalInstallUsers = rs.getInt("total_install_users");
-                    oldValueMap.put("" + platformId, totalInstallUsers);
-                }
-            }
-
-            //添加当天的新用户
-            pstmt = conn.prepareStatement("select platform_dimension_id," +
-                    "new_install_users from stats_user where " +
-                    "date_dimension_id=?");
-            pstmt.setInt(1, todayDimensionId);
-            rs = pstmt.executeQuery();
-            while(rs.next()){
-                int platformId = rs.getInt("platform_dimension_id");
-                int newInstallUsers = rs.getInt("new_install_users");
-                if(oldValueMap.containsKey(platformId)){
-                    newInstallUsers += oldValueMap.get("" + platformId);
-                }
-                oldValueMap.put("" + platformId, newInstallUsers);
-            }
-
-            //更新操作
-            pstmt = conn.prepareStatement("insert into stats_user " +
-                    "(platform_dimension_id,date_dimension_id," +
-                    "total_install_users) values (?,?,?) on duplicate key " +
-                    "update total_install_users=?");
-
-            for(Map.Entry<String, Integer> entry : oldValueMap.entrySet()){
-                pstmt.setInt(1, Integer.valueOf(entry.getKey()));
-                pstmt.setInt(2, todayDimensionId);
-                pstmt.setInt(3, entry.getValue());
-                pstmt.setInt(4, entry.getValue());
-                pstmt.execute();
-            }
-
-            // 开始更新stats_device_browser:TODO
-            // 添加今天的总用户:TODO
-        } catch (SQLException e) {
-
+        //执行MapReduce Job
+        if (job.waitForCompletion(true)) {
+            //如果MapReduce Job执行成功，则计算总用户数
+            new TotalInstallUserCalculate().calculateTotalUsers(conf);
+            return 0;
+        } else {
+            return 1;
         }
-
-
     }
 
     /**

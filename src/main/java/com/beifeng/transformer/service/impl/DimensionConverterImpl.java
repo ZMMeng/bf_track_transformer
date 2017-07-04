@@ -47,7 +47,7 @@ public class DimensionConverterImpl implements IDimensionConverter {
         }
     };
 
-    static{
+    static {
         try {
             Class.forName(DRIVER);
         } catch (ClassNotFoundException e) {
@@ -85,8 +85,7 @@ public class DimensionConverterImpl implements IDimensionConverter {
             } else if (dimension instanceof BrowserDimension) {
                 sqls = buildBrowserSql();
             } else {
-                throw new IOException("不支持此种dimension的id的获取：" + dimension
-                        .getClass());
+                throw new IOException("不支持此种dimension的id的获取：" + dimension.getClass());
             }
 
             //获取数据库连接
@@ -113,11 +112,12 @@ public class DimensionConverterImpl implements IDimensionConverter {
 
     /**
      * 获取数据库连接
+     *
      * @return 数据库连接
      * @throws SQLException 获取失败，抛出异常
      */
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL,USERNAME,PASSWORD);
+        return DriverManager.getConnection(URL, USERNAME, PASSWORD);
     }
 
     /**
@@ -138,9 +138,8 @@ public class DimensionConverterImpl implements IDimensionConverter {
             //强转
             DateDimension date = (DateDimension) dimension;
             //添加字段值(id除外)
-            sb.append(date.getYear()).append(date.getSeason()).append(date
-                    .getMonth()).append(date.getWeek()).append(date.getDay())
-                    .append(date.getType());
+            sb.append(date.getYear()).append(date.getSeason()).append(date.getMonth()).append(date.getWeek
+                    ()).append(date.getDay()).append(date.getType());
         } else if (dimension instanceof PlatformDimension) {
             //dimension的类型是PlatformDimension
             //类型信息
@@ -156,16 +155,13 @@ public class DimensionConverterImpl implements IDimensionConverter {
             //强转
             BrowserDimension browser = (BrowserDimension) dimension;
             //添加字段值(id除外)
-            sb.append(browser.getBrowserName()).append(browser
-                    .getBrowserVersion());
+            sb.append(browser.getBrowserName()).append(browser.getBrowserVersion());
         }
 
         //判断sb是否为空
         if (sb.length() == 0) {
             //sb为空，说明dimension的类型不在上述提到的几种类型之中，抛出异常
-            throw new RuntimeException("无法创建指定dimension的cache key：" + dimension
-                    .getClass
-                            ());
+            throw new RuntimeException("无法创建指定dimension的cache key：" + dimension.getClass());
         }
         return sb.toString();
     }
@@ -211,11 +207,10 @@ public class DimensionConverterImpl implements IDimensionConverter {
      * @return
      */
     private String[] buildDateSql() {
-        String querySql = "select id from dimension_date where year=? and " +
-                "season=? and month=? and week=? and day=? and type=? and " +
-                "calendar=?;";
-        String insertSql = "insert into dimension_date (year,season,month," +
-                "week,day,type,calendar) values (?,?,?,?,?,?,?);";
+        String querySql = "select id from dimension_date where year=? and season=? and month=? and week=? " +
+                "and day=? and type=? and calendar=?;";
+        String insertSql = "insert into dimension_date (year,season,month,week,day,type,calendar) values " +
+                "(?,?,?,?,?,?,?);";
         return new String[]{querySql, insertSql};
     }
 
@@ -225,10 +220,8 @@ public class DimensionConverterImpl implements IDimensionConverter {
      * @return
      */
     private String[] buildPlatformSql() {
-        String querySql = "select id from dimension_platform where " +
-                "platform_name=?;";
-        String insertSql = "insert into dimension_platform (platform_name) " +
-                "values (?);";
+        String querySql = "select id from dimension_platform where platform_name=?;";
+        String insertSql = "insert into dimension_platform (platform_name) values (?);";
         return new String[]{querySql, insertSql};
     }
 
@@ -238,11 +231,9 @@ public class DimensionConverterImpl implements IDimensionConverter {
      * @return
      */
     private String[] buildBrowserSql() {
-        String querySql = "select id from dimension_browser where " +
-                "browser_name=? and browser_version=?;";
-        String insertSql = "insert into dimension_browser (browser_name," +
-                "browser_version) values (?,?);";
-        return null;
+        String querySql = "select id from dimension_browser where browser_name=? and browser_version=?;";
+        String insertSql = "insert into dimension_browser (browser_name,browser_version) values (?,?);";
+        return new String[]{querySql, insertSql};
     }
 
     /**
@@ -270,13 +261,12 @@ public class DimensionConverterImpl implements IDimensionConverter {
             //没有值，表示该dimension在数据库中不存在
             //将dimension插入数据库后，再查出对应的id
             //Statement.RETURN_GENERATED_KEYS参数表示将产生的主键返回
-            pstmt = conn.prepareStatement(sqls[1], Statement
-                    .RETURN_GENERATED_KEYS);
-            setArgs(pstmt,dimension);
+            pstmt = conn.prepareStatement(sqls[1], Statement.RETURN_GENERATED_KEYS);
+            setArgs(pstmt, dimension);
             pstmt.executeUpdate();
             //获取插入数据后新产生的主键id
             rs = pstmt.getGeneratedKeys();
-            if(rs.next()){
+            if (rs.next()) {
                 //返回自动生成的id
                 return rs.getInt(1);
             }

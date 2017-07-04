@@ -3,9 +3,7 @@ package com.beifeng.utils;
 import com.beifeng.common.GlobalConstants;
 import org.apache.hadoop.conf.Configuration;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * jdbc管理类
@@ -41,5 +39,35 @@ public class JdbcManager {
             //nothing
         }
         return DriverManager.getConnection(url, username, password);
+    }
+
+    /**
+     * 关闭数据库相关资源
+     * @param conn 数据库连接
+     * @param pstmt 预处理对象
+     * @param rs 结果集对象
+     */
+    public static void close(Connection conn, PreparedStatement pstmt, ResultSet rs){
+        if(rs != null){
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                //nothing
+            }
+        }
+        if(pstmt != null){
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //nothing
+            }
+        }
+        if(conn != null){
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                //nothing
+            }
+        }
     }
 }

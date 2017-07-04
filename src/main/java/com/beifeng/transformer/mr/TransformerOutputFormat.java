@@ -40,9 +40,7 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
         IDimensionConverter converter = new DimensionConverterImpl();
         try {
             //获取connection
-            conn = JdbcManager.getConnection(conf, GlobalConstants
-                    .WAREHOUSE_OF_REPORT)
-            ; //TODO
+            conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
             //取消自动提交
             conn.setAutoCommit(false);
         } catch (SQLException e) {
@@ -83,13 +81,11 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
         //dimension表的对象
         private IDimensionConverter converter;
         //缓存kpi
-        private Map<KpiType, PreparedStatement> map = new HashMap<KpiType,
-                PreparedStatement>();
+        private Map<KpiType, PreparedStatement> map = new HashMap<KpiType, PreparedStatement>();
         //存储当前可提交的kpi以及其可提交的次数
         private Map<KpiType, Integer> batch = new HashMap<KpiType, Integer>();
 
-        public TransformerRecordWriter(Connection conn, Configuration conf,
-                                       IDimensionConverter converter) {
+        public TransformerRecordWriter(Connection conn, Configuration conf, IDimensionConverter converter) {
             this.conn = conn;
             this.conf = conf;
             this.converter = converter;
@@ -127,19 +123,16 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
                 batch.put(kpi, count);
 
                 //获取collector的类全名
-                String collectorName = conf.get(GlobalConstants
-                        .OUTPUT_COLLECTOR_KEY_PREFIX + kpi.name);
+                String collectorName = conf.get(GlobalConstants.OUTPUT_COLLECTOR_KEY_PREFIX + kpi.name);
                 //获取collector类的字节码对象
                 Class<?> clazz = Class.forName(collectorName);
                 //根据获得的字节码对象创建collector对象
-                IOutputCollector collector = (IOutputCollector) clazz
-                        .newInstance();
+                IOutputCollector collector = (IOutputCollector) clazz.newInstance();
                 //执行统计数据插入
                 collector.collect(conf, key, value, pstmt, converter);
 
                 //判断批量执行数是否达到Hadoop配置信息中的配置批量执行数
-                if (count % Integer.valueOf(conf.get(GlobalConstants
-                        .JDBC_BATCH_NUMBER, GlobalConstants
+                if (count % Integer.valueOf(conf.get(GlobalConstants.JDBC_BATCH_NUMBER, GlobalConstants
                         .DEFAULT_JDBC_BATCH_NUMBER)) == 0) {
                     //达到，执行批处理
                     pstmt.executeBatch();
@@ -156,14 +149,11 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
 
         }
 
-        public void close(TaskAttemptContext context) throws IOException,
-                InterruptedException {
+        public void close(TaskAttemptContext context) throws IOException, InterruptedException {
             try {
-                for (Map.Entry<KpiType, PreparedStatement> entry : map
-                        .entrySet()) {
+                for (Map.Entry<KpiType, PreparedStatement> entry : map.entrySet()) {
                     entry.getValue().executeUpdate();
                 }
-
             } catch (SQLException e) {
                 logger.error("执行executeUpdate方法异常", e);
                 throw new IOException(e);
@@ -177,15 +167,15 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
                     //nothing
                 } finally {
                     //关闭PrepareStatement对象
-                    for(Map.Entry<KpiType, PreparedStatement> entry : map.entrySet()){
-                        try{
+                    for (Map.Entry<KpiType, PreparedStatement> entry : map.entrySet()) {
+                        try {
                             entry.getValue().close();
                         } catch (SQLException e) {
                             //nothing
                         }
                     }
                     //关闭Connection对象
-                    if(conn != null){
+                    if (conn != null) {
                         try {
                             conn.close();
                         } catch (SQLException e) {

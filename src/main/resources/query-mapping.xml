@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 
-<!-- KPI相关 -->
+<!-- 在Reduce输出后，将数据插入到MySQL所需要执行的SQL语句 -->
 <configuration>
     <property>
-        <name>collector_new_install_user</name>
-        <value></value>
+        <name>new_install_user</name>
+        <value>
+            insert into stats_user (
+            platform_dimension_id,
+            date_dimension_id,
+            new_install_users,
+            created
+            ) values (?,?,?,?) on duplicate key update new_install_users=?
+        </value>
     </property>
     <property>
-        <name>collector_browser_new_install_user</name>
-        <value></value>
+        <name>browser_new_install_user</name>
+        <value>
+            insert into stats_device_browser (
+            platform_dimension_id,
+            date_dimension_id,
+            browser_dimension_id,
+            new_install_users,
+            created
+            ) values (?,?,?,?,?) on duplicate key update new_install_users=?
+        </value>
     </property>
 </configuration>

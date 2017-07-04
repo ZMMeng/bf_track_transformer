@@ -100,8 +100,7 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
         protected void cleanup(Context context) throws IOException,
                 InterruptedException {
             super.cleanup(context);
-            logger.info("输入数据：" + inputRecords + "，输出数据：" + outputRecords +
-                    "，过滤数据：" + filterRecords);
+            logger.info("输入数据：" + inputRecords + "，输出数据：" + outputRecords + "，过滤数据：" + filterRecords);
         }
 
         /**
@@ -117,14 +116,11 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
                 context, EventLogConstants.EventEnum event) throws IOException,
                 InterruptedException {
             //获取UUID
-            String uuid = clientInfo.get(EventLogConstants
-                    .LOG_COLUMN_NAME_UUID);
+            String uuid = clientInfo.get(EventLogConstants.LOG_COLUMN_NAME_UUID);
             //获取会员ID
-            String memberId = clientInfo.get(EventLogConstants
-                    .LOG_COLUMN_NAME_MEMBER_ID);
+            String memberId = clientInfo.get(EventLogConstants.LOG_COLUMN_NAME_MEMBER_ID);
             //获取服务器时间
-            String serverTime = clientInfo.get(EventLogConstants
-                    .LOG_COLUMN_NAME_SERVER_TIME);
+            String serverTime = clientInfo.get(EventLogConstants.LOG_COLUMN_NAME_SERVER_TIME);
             //判断服务器时间是否为空
             if (StringUtils.isBlank(serverTime)) {
                 //服务器时间为空，将该记录过滤，过滤记录数自增，直接返回
@@ -141,12 +137,9 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
             Put put = new Put(Bytes.toBytes(rowkey));
             //将clientInfo中的所有信息写入到HBase表中
             for (Map.Entry<String, String> entry : clientInfo.entrySet()) {
-                if (StringUtils.isNotBlank(entry.getKey()) && StringUtils
-                        .isNotBlank(entry.getValue())) {
+                if (StringUtils.isNotBlank(entry.getKey()) && StringUtils.isNotBlank(entry.getValue())) {
                     //只有key和value同时不为空的情况下，才能写入到HBase表中
-                    put.add(family, Bytes
-                            .toBytes(entry.getKey()), Bytes.toBytes(entry
-                            .getValue()));
+                    put.add(family, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
                 }
             }
             context.write(NullWritable.get(), put);
@@ -227,7 +220,7 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
             //获取HDFS
             fs = FileSystem.get(conf);
             String date = conf.get(GlobalConstants.RUNNING_DATE_PARAMS);
-            //TODO:更改文件格式
+            //更改文件格式
             Path inputPath = new Path("/user/hadoop/flume/nginx_logs/" +
                     TimeUtil.parseLong2String(TimeUtil.parseString2Long(date),
                             "MM/dd/"));
