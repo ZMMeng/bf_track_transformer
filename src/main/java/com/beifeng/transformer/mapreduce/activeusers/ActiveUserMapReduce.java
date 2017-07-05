@@ -47,6 +47,7 @@ public class ActiveUserMapReduce extends Configured implements Tool {
 
     //日志打印对象
     private static final Logger logger = Logger.getLogger(ActiveUserMapReduce.class);
+    //HBase配置信息
     private static final Configuration conf = HBaseConfiguration.create();
 
     public static class ActiveUserMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {
@@ -176,7 +177,7 @@ public class ActiveUserMapReduce extends Configured implements Tool {
         //设置Reduce相关参数
         job.setReducerClass(ActiveUserReducer.class);
         job.setOutputKeyClass(StatsUserDimension.class);
-        job.setOutputValueClass(StatsUserDimension.class);
+        job.setOutputValueClass(MapWritableValue.class);
 
         //设置输出的相关参数
         job.setOutputFormatClass(TransformerOutputFormat.class);

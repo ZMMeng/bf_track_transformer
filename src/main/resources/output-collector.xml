@@ -38,4 +38,12 @@
         <name>collector_insert_member_info</name>
         <value>com.beifeng.transformer.mapreduce.newmembers.NewMemberCollector</value>
     </property>
+    <property>
+        <name>collector_sessions</name>
+        <value>com.beifeng.transformer.mapreduce.sessions.SessionsCollector</value>
+    </property>
+    <property>
+        <name>collector_browser_sessions</name>
+        <value>com.beifeng.transformer.mapreduce.sessions.SessionsCollector</value>
+    </property>
 </configuration>

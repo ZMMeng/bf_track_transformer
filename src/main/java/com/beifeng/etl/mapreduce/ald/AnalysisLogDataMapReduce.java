@@ -40,13 +40,11 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
     public static class AnalysisLogDataMapper extends Mapper<LongWritable,
             Text, NullWritable, Put> {
         //打印日志工具
-        private static final Logger logger = Logger.getLogger
-                (AnalysisLogDataMapReduce.class);
+        private static final Logger logger = Logger.getLogger(AnalysisLogDataMapReduce.class);
         //主要用于标记，方便查看过滤数据，分别为输入记录数、过滤记录数和输出记录数
         private int inputRecords, filterRecords, outputRecords;
         //列簇名的二进制数据
-        private byte[] family = Bytes.toBytes(EventLogConstants
-                .HBASE_COLUMN_FAMILY_NAME);
+        private byte[] family = Bytes.toBytes(EventLogConstants.HBASE_COLUMN_FAMILY_NAME);
         //
         private CRC32 crc32 = new CRC32();
 
@@ -67,10 +65,8 @@ public class AnalysisLogDataMapReduce extends Configured implements Tool {
                 }
 
                 //获取事件名称
-                String eventAliasName = clientInfo.get
-                        (EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME);
-                EventLogConstants.EventEnum event = EventLogConstants
-                        .EventEnum.valueOfAlias(eventAliasName);
+                String eventAliasName = clientInfo.get(EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME);
+                EventLogConstants.EventEnum event = EventLogConstants.EventEnum.valueOfAlias(eventAliasName);
                 switch (event) {
                     case LAUNCH:
                     case PAGEVIEW:
