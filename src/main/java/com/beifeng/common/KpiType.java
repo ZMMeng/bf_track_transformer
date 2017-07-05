@@ -27,7 +27,14 @@ public enum KpiType {
     //统计会话KPI
     SESSIONS("sessions"),
     //统计浏览器维度会话KPI
-    BROWSER_SESSIONS("browser_sessions");
+    BROWSER_SESSIONS("browser_sessions"),
+    //按小时统计活跃用户KPI
+    HOURLY_ACTIVE_USER("hourly_active_user"),
+    //按小时统计会话个数KPI
+    HOURLY_SESSIONS("hourly_sessions"),
+    //按小时统计会话长度KPI
+    HOURLY_SESSIONS_LENGTH("hour_sessions_length"),
+    ;
 
     public final String name;
 

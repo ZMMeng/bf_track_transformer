@@ -35,6 +35,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
@@ -154,6 +155,18 @@ public class NewMemberMapReduce extends Configured implements Tool {
                     //由于需要进行clean操作，故将该值复制后填充
                     mapOutputKey.setBrowser(WritableUtils.clone(bf, context.getConfiguration()));
                     context.write(mapOutputKey, mapOutputValue);
+                }
+            }
+        }
+
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            //关闭数据库连接
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    //nothing
                 }
             }
         }

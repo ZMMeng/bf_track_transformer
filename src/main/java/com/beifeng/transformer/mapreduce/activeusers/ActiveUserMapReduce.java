@@ -35,9 +35,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 自定义的统计活跃用户的MapReduce类
@@ -64,6 +62,8 @@ public class ActiveUserMapReduce extends Configured implements Tool {
         private KpiDimension activeUserKpi = new KpiDimension(KpiType.ACTIVE_USER.name);
         //浏览器基本信息分析模块的KPI维度信息
         private KpiDimension activeUserOfBrowserKpi = new KpiDimension(KpiType.BROWSER_ACTIVE_USER.name);
+        //按小时统计活跃用户的KPI维度信息
+        private KpiDimension hourlyActiveUserKpi = new KpiDimension(KpiType.HOURLY_ACTIVE_USER.name);
 
         @Override
         protected void map(ImmutableBytesWritable key, Result value, Context context) throws IOException,
@@ -89,8 +89,11 @@ public class ActiveUserMapReduce extends Configured implements Tool {
 
             //将服务器时间字符串转化为时间戳
             long longOfTime = Long.valueOf(serverTime.trim());
-            //设置Map输出值对象timeOutputValue的属性值，只需要id
+            //设置Map输出值对象timeOutputValue的属性值
+            //用于标识用户
             mapOutputValue.setId(uuid);
+            //用于按小时分析
+            mapOutputValue.setTimestamp(longOfTime);
             //构建日期维度信息
             DateDimension dateDimension = DateDimension.buildDate(longOfTime, DateEnum.DAY);
             //构建平台维度信息
@@ -115,6 +118,9 @@ public class ActiveUserMapReduce extends Configured implements Tool {
                 statsCommonDimension.setKpi(activeUserKpi);
                 statsCommonDimension.setPlatform(pf);
                 context.write(mapOutputKey, mapOutputValue);
+
+                statsCommonDimension.setKpi(hourlyActiveUserKpi);
+                context.write(mapOutputKey, mapOutputValue);
                 for (BrowserDimension bf : browserDimensions) {
                     statsCommonDimension.setKpi(activeUserOfBrowserKpi);
                     //由于需要进行clean操作，故将该值复制后填充
@@ -130,26 +136,57 @@ public class ActiveUserMapReduce extends Configured implements Tool {
 
         //
         private Set<String> unique = new HashSet<String>();
+        //
+        private Map<Integer, Set<String>> hourlyUnique = new HashMap<Integer, Set<String>>();
         //Reduce输出的值
         private MapWritableValue outputValue = new MapWritableValue();
+        //
+        private MapWritable map = new MapWritable();
+        //
+        private MapWritable hourlyMap = new MapWritable();
+
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+            super.setup(context);
+            //初识化hourlyMap和hourlyUnique
+            for (int i = 0; i < 24; i++) {
+                hourlyMap.put(new IntWritable(i), new IntWritable(0));
+                hourlyUnique.put(0, new HashSet<String>());
+            }
+        }
 
         @Override
         protected void reduce(StatsUserDimension key, Iterable<TimeOutputValue> values, Context context)
                 throws IOException, InterruptedException {
 
             try {
-                //将UUID添加到unique集合中，以便统计UUID的去重个数
-                for (TimeOutputValue value : values) {
-                    unique.add(value.getId());
+                //获取key的KPI名称
+                String kpiName = key.getStatsCommon().getKpi().getKpiName();
+                //判断KPI类型
+                if (KpiType.HOURLY_ACTIVE_USER.name.equals(kpiName)) {
+                    //按小时统计活跃用户数KPI
+                    for (TimeOutputValue value : values) {
+                        //计算访问的小时
+                        int hour = TimeUtil.getDateInfo(value.getTimestamp(),DateEnum.HOUR);
+                        //将用户加入到对应时间段中
+                        hourlyUnique.get(hour).add(value.getId());
+                    }
+                } else {
+                    //其他KPI
+
+                    //将UUID添加到unique集合中，以便统计UUID的去重个数
+                    for (TimeOutputValue value : values) {
+                        unique.add(value.getId());
+                    }
+
+
+                    map.put(new IntWritable(-1), new IntWritable(unique.size()));
+                    outputValue.setValue(map);
+                    outputValue.setKpi(KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName()));
+
+                    //进行输出
+                    context.write(key, outputValue);
                 }
-
-                MapWritable map = new MapWritable();
-                map.put(new IntWritable(-1), new IntWritable(unique.size()));
-                outputValue.setValue(map);
-                outputValue.setKpi(KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName()));
-
-                //进行输出
-                context.write(key, outputValue);
             } finally {
                 //清空
                 unique.clear();
