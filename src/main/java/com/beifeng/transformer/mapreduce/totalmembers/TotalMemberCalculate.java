@@ -127,7 +127,7 @@ public class TotalMemberCalculate {
 
         while (rs.next()) {
             int platformId = rs.getInt("platform_dimension_id");
-            int totalMembers = rs.getInt("total_install_users");
+            int totalMembers = rs.getInt("total_members");
             //将查询出来的平台名称以及相应的总会员数放入到Map集合中
             map.put("" + platformId, totalMembers);
         }
@@ -150,7 +150,7 @@ public class TotalMemberCalculate {
         while (rs.next()) {
             int platformId = rs.getInt("platform_dimension_id");
             int browserId = rs.getInt("browser_dimension_id");
-            int totalMembers = rs.getInt("total_install_users");
+            int totalMembers = rs.getInt("total_members");
             //将查询出来的平台名称以及相应的总会员数放入到Map集合中
             map.put(platformId + "_" + browserId, totalMembers);
         }
@@ -174,7 +174,7 @@ public class TotalMemberCalculate {
             int platformId = rs.getInt("platform_dimension_id");
             int newMembers = rs.getInt("new_members");
             //查看该平台是否已有会员
-            if (map.containsKey(platformId)) {
+            if (map.containsKey("" + platformId)) {
                 //该平台已有会员，将前一天的总会员数加上当天的新增用户数，即为当天的总会员数
                 newMembers += map.get("" + platformId);
             }

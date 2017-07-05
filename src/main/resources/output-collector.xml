@@ -46,4 +46,8 @@
         <name>collector_browser_sessions</name>
         <value>com.beifeng.transformer.mapreduce.sessions.SessionsCollector</value>
     </property>
+    <property>
+        <name>collector_hourly_active_user</name>
+        <value>com.beifeng.transformer.mapreduce.activeusers.HourlyActiveUserCollector</value>
+    </property>
 </configuration>

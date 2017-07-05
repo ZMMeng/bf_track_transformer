@@ -134,24 +134,24 @@ public class ActiveUserMapReduce extends Configured implements Tool {
     public static class ActiveUserReducer extends Reducer<StatsUserDimension, TimeOutputValue,
             StatsUserDimension, MapWritableValue> {
 
-        //
+        //用于存储UUID，方便数据去重
         private Set<String> unique = new HashSet<String>();
-        //
+        //用于存储UUID(按时段)，方便数据去重
         private Map<Integer, Set<String>> hourlyUnique = new HashMap<Integer, Set<String>>();
         //Reduce输出的值
         private MapWritableValue outputValue = new MapWritableValue();
-        //
+        //outputValue中的value属性值(KPI为统计活跃用户)
         private MapWritable map = new MapWritable();
-        //
+        //outputValue中的value属性值
         private MapWritable hourlyMap = new MapWritable();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
             super.setup(context);
-            //初识化hourlyMap和hourlyUnique
+            //初识化hourlyMap和hourlyUnique，创建24个小时，以及存储的内容
             for (int i = 0; i < 24; i++) {
                 hourlyMap.put(new IntWritable(i), new IntWritable(0));
-                hourlyUnique.put(0, new HashSet<String>());
+                hourlyUnique.put(i, new HashSet<String>());
             }
         }
 
@@ -171,6 +171,18 @@ public class ActiveUserMapReduce extends Configured implements Tool {
                         //将用户加入到对应时间段中
                         hourlyUnique.get(hour).add(value.getId());
                     }
+
+                    for(Map.Entry<Integer, Set<String>> entry : hourlyUnique.entrySet()){
+                        hourlyMap.put(new IntWritable(entry.getKey()), new IntWritable(entry.getValue()
+                                .size()));
+                    }
+
+                    //设置KPI
+                    outputValue.setKpi(KpiType.HOURLY_ACTIVE_USER);
+                    //设置value
+                    outputValue.setValue(hourlyMap);
+                    //输出
+                    context.write(key, outputValue);
                 } else {
                     //其他KPI
 
@@ -190,6 +202,13 @@ public class ActiveUserMapReduce extends Configured implements Tool {
             } finally {
                 //清空
                 unique.clear();
+                map.clear();
+                hourlyMap.clear();
+                hourlyUnique.clear();
+                for (int i = 0; i < 24; i++) {
+                    hourlyMap.put(new IntWritable(i), new IntWritable(0));
+                    hourlyUnique.put(i, new HashSet<String>());
+                }
             }
         }
     }
