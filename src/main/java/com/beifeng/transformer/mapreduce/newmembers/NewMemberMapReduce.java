@@ -1,10 +1,12 @@
-package com.beifeng.transformer.mapreduce.activemember;
+package com.beifeng.transformer.mapreduce.newmembers;
 
 import com.beifeng.common.DateEnum;
 import com.beifeng.common.EventLogConstants;
 import com.beifeng.common.GlobalConstants;
 import com.beifeng.common.KpiType;
 import com.beifeng.transformer.mapreduce.TransformerOutputFormat;
+import com.beifeng.transformer.mapreduce.activemembers.ActiveMemberMapReduce;
+import com.beifeng.transformer.mapreduce.totalmembers.TotalMemberCalculate;
 import com.beifeng.transformer.model.dimension.StatsCommonDimension;
 import com.beifeng.transformer.model.dimension.StatsUserDimension;
 import com.beifeng.transformer.model.dimension.basic.BrowserDimension;
@@ -13,6 +15,8 @@ import com.beifeng.transformer.model.dimension.basic.KpiDimension;
 import com.beifeng.transformer.model.dimension.basic.PlatformDimension;
 import com.beifeng.transformer.model.value.map.TimeOutputValue;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
+import com.beifeng.transformer.util.MemberUtil;
+import com.beifeng.utils.JdbcManager;
 import com.beifeng.utils.TimeUtil;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
@@ -28,6 +32,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -35,24 +40,27 @@ import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * 自定义的统计活跃会员的MapReduce类
- * Created by Administrator on 2017/7/4.
+ * 统计新增会员的MapReduce
+ * Created by Administrator on 2017/7/5.
  */
-public class ActiveMemberMapReduce extends Configured implements Tool {
+public class NewMemberMapReduce extends Configured implements Tool {
 
     //日志打印对象
     private static final Logger logger = Logger.getLogger(ActiveMemberMapReduce.class);
+    //HBase配置信息
     private static final Configuration conf = HBaseConfiguration.create();
 
-    public static class ActiveMemberMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {
+    public static class NewMemberMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {
 
         //打印日志对象
-        private static final Logger logger = Logger.getLogger(ActiveMemberMapper.class);
+        private static final Logger logger = Logger.getLogger(NewMemberMapper.class);
         //HBase表列簇的二进制数据
         private byte[] family = Bytes.toBytes(EventLogConstants.HBASE_COLUMN_FAMILY_NAME);
         //Map输出的键
@@ -60,17 +68,45 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
         //Map输出的值
         private TimeOutputValue mapOutputValue = new TimeOutputValue();
         //用户基本信息分析模块的KPI维度信息
-        private KpiDimension activeMemberKpi = new KpiDimension(KpiType.ACTIVE_MEMBER.name);
+        private KpiDimension newMemberKpi = new KpiDimension(KpiType.NEW_MEMBER.name);
         //浏览器基本信息分析模块的KPI维度信息
-        private KpiDimension activeMemberOfBrowserKpi = new KpiDimension(KpiType.BROWSER_ACTIVE_MEMBER.name);
+        private KpiDimension newMemberOfBrowserKpi = new KpiDimension(KpiType.BROWSER_NEW_MEMBER.name);
+        //数据库连接
+        private Connection conn = null;
+
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+            //进行初始化操作
+            Configuration conf = context.getConfiguration();
+            try {
+                //进行初始化操作
+                conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+                //删除指定日期的数据
+                MemberUtil.deleteMemberInfoByDate(conf.get(GlobalConstants.RUNNING_DATE_PARAMS), conn);
+            } catch (SQLException e) {
+                logger.error("获取数据库连接出现异常", e);
+                throw new IOException("连接数据库失败", e);
+            }
+        }
 
         @Override
         protected void map(ImmutableBytesWritable key, Result value, Context context) throws IOException,
                 InterruptedException {
 
             //从HBase表中读取memberID
-            String memberID = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
+            String memberId = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
                     .LOG_COLUMN_NAME_MEMBER_ID)));
+            //判断memberId是否是第一次访问，即判断该memberId是否是新增会员
+            try {
+                if (!MemberUtil.isValidateMemberId(memberId) || !MemberUtil.isNewMemberId(memberId, conn)) {
+                    logger.warn("member id不能为空，且必须是第一次访问该网站的会员id");
+                    return;
+                }
+            } catch (SQLException e) {
+                logger.error("查询" + memberId + "是否是新增会员时出现数据库异常", e);
+                throw new IOException("查询" + memberId + "是否是新增会员时出现数据库异常", e);
+            }
+
             //从HBase表中读取服务器时间
             String serverTime = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
                     .LOG_COLUMN_NAME_SERVER_TIME)));
@@ -79,17 +115,17 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
                     .LOG_COLUMN_NAME_PLATFORM)));
 
             //过滤无效数据，会员ID、服务器时间和平台信息有任意一个为空或者服务器时间非数字，则视该条记录为无效记录
-            if (StringUtils.isBlank(memberID) || StringUtils.isBlank(serverTime) || !StringUtils.isNumeric
-                    (serverTime.trim()) || StringUtils.isBlank(platform)) {
+            if (StringUtils.isBlank(serverTime) || !StringUtils.isNumeric(serverTime.trim()) || StringUtils
+                    .isBlank(platform)) {
                 //上述变量只要有一个为空，直接返回
-                logger.warn("会员ID、服务器时间以及平台信息不能为空，服务器时间必须是数字");
+                logger.warn("服务器时间、平台信息不能为空，服务器时间必须是数字");
                 return;
             }
 
             //将服务器时间字符串转化为时间戳
             long longOfTime = Long.valueOf(serverTime.trim());
             //设置Map输出值对象timeOutputValue的属性值，只需要id
-            mapOutputValue.setId(memberID);
+            mapOutputValue.setId(memberId);
             //构建日期维度信息
             DateDimension dateDimension = DateDimension.buildDate(longOfTime, DateEnum.DAY);
             //构建平台维度信息
@@ -104,18 +140,17 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
             List<BrowserDimension> browserDimensions = BrowserDimension.buildList(browserName,
                     browserVersion);
 
-
             //Map输出
             StatsCommonDimension statsCommonDimension = mapOutputKey.getStatsCommon();
             statsCommonDimension.setDate(dateDimension);
             for (PlatformDimension pf : platformDimensions) {
                 //清空statsUserDimension中BrowserDimension的内容
                 mapOutputKey.getBrowser().clean();
-                statsCommonDimension.setKpi(activeMemberKpi);
+                statsCommonDimension.setKpi(newMemberKpi);
                 statsCommonDimension.setPlatform(pf);
                 context.write(mapOutputKey, mapOutputValue);
                 for (BrowserDimension bf : browserDimensions) {
-                    statsCommonDimension.setKpi(activeMemberOfBrowserKpi);
+                    statsCommonDimension.setKpi(newMemberOfBrowserKpi);
                     //由于需要进行clean操作，故将该值复制后填充
                     mapOutputKey.setBrowser(WritableUtils.clone(bf, context.getConfiguration()));
                     context.write(mapOutputKey, mapOutputValue);
@@ -124,36 +159,43 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
         }
     }
 
-    public static class ActiveMemberReducer extends Reducer<StatsUserDimension, TimeOutputValue,
+    public static class NewMemberReducer extends Reducer<StatsUserDimension, TimeOutputValue,
             StatsUserDimension, MapWritableValue> {
 
         //
         private Set<String> unique = new HashSet<String>();
         //Reduce输出的值
         private MapWritableValue outputValue = new MapWritableValue();
+        //
+        private MapWritable map = new MapWritable();
 
         @Override
         protected void reduce(StatsUserDimension key, Iterable<TimeOutputValue> values, Context context)
                 throws IOException, InterruptedException {
 
-            try {
-                //将会员ID添加到unique集合中，以便统计会员ID的去重个数
-                for (TimeOutputValue value : values) {
-                    unique.add(value.getId());
-                }
+            //进行清空操作
+            unique.clear();
 
-                MapWritable map = new MapWritable();
-                map.put(new IntWritable(-1), new IntWritable(unique.size()));
-                outputValue.setValue(map);
-                //设置KPI
-                outputValue.setKpi(KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName()));
-
-                //进行输出
-                context.write(key, outputValue);
-            } finally {
-                //清空
-                unique.clear();
+            //将会员ID添加到unique集合中，以便统计会员ID的去重个数
+            for (TimeOutputValue value : values) {
+                unique.add(value.getId());
             }
+
+            //输出memberId
+            outputValue.setKpi(KpiType.INSERT_MEMBER_INFO);
+            for (String id : unique) {
+                map.put(new IntWritable(-1), new Text(id));
+                outputValue.setValue(map);
+                context.write(key, outputValue);
+            }
+
+            map.put(new IntWritable(-1), new IntWritable(unique.size()));
+            outputValue.setValue(map);
+            //设置KPI
+            outputValue.setKpi(KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName()));
+
+            //进行输出
+            context.write(key, outputValue);
         }
     }
 
@@ -172,17 +214,22 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
         Job job = Job.getInstance(conf, this.getClass().getSimpleName());
         //设置HBase输入Mapper的参数
         //本地运行
-        TableMapReduceUtil.initTableMapperJob(initScan(job), ActiveMemberMapper.class, StatsUserDimension
-                        .class,
-                TimeOutputValue.class, job, false);
+        TableMapReduceUtil.initTableMapperJob(initScan(job), NewMemberMapper.class, StatsUserDimension
+                .class, TimeOutputValue.class, job, false);
         //设置Reduce相关参数
-        job.setReducerClass(ActiveMemberReducer.class);
+        job.setReducerClass(NewMemberReducer.class);
         job.setOutputKeyClass(StatsUserDimension.class);
-        job.setOutputValueClass(StatsUserDimension.class);
+        job.setOutputValueClass(MapWritableValue.class);
 
         //设置输出的相关参数
         job.setOutputFormatClass(TransformerOutputFormat.class);
-        return job.waitForCompletion(true) ? 0 : 1;
+        //运行MapReduce任务
+        if(job.waitForCompletion(true)){
+            //计算当天新增会员数MapReduce任务成功后，执行计算当天总会员数任务
+            new TotalMemberCalculate().calculateTotalMembers(conf);
+            return 0;
+        }
+        return 1;
     }
 
     /**
@@ -211,17 +258,12 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
         //添加过滤器
 
         //Map任务需要获取的列名
-        String[] columns = {EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME, EventLogConstants
-                .LOG_COLUMN_NAME_MEMBER_ID, EventLogConstants.LOG_COLUMN_NAME_SERVER_TIME,
-                EventLogConstants.LOG_COLUMN_NAME_PLATFORM, EventLogConstants.LOG_COLUMN_NAME_BROWSER_NAME,
-                EventLogConstants.LOG_COLUMN_NAME_BROWSER_VERSION};
+        String[] columns = {EventLogConstants.LOG_COLUMN_NAME_MEMBER_ID, EventLogConstants
+                .LOG_COLUMN_NAME_SERVER_TIME, EventLogConstants.LOG_COLUMN_NAME_PLATFORM, EventLogConstants
+                .LOG_COLUMN_NAME_BROWSER_NAME, EventLogConstants.LOG_COLUMN_NAME_BROWSER_VERSION};
         //添加过滤器
         filterList.addFilter(getColumnFilter(columns));
-        //只需要pageView事件
-        filterList.addFilter(new SingleColumnValueFilter(Bytes.toBytes(EventLogConstants
-                .HBASE_COLUMN_FAMILY_NAME), Bytes.toBytes(EventLogConstants.LOG_COLUMN_NAME_EVENT_NAME),
-                CompareFilter.CompareOp.EQUAL, Bytes.toBytes(EventLogConstants.EventEnum.PAGEVIEW.getAlias
-                ())));
+
         //将过滤器添加到scan对象中
         scan.setFilter(filterList);
         //设置HBase表名
@@ -233,7 +275,7 @@ public class ActiveMemberMapReduce extends Configured implements Tool {
     /**
      * 获取过滤给定列名的过滤器
      *
-     * @param columns
+     * @param columns 列名集合
      * @return
      */
     private Filter getColumnFilter(String[] columns) {

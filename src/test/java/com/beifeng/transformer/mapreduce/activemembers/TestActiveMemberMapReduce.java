@@ -1,4 +1,4 @@
-package com.beifeng.transformer.mapreduce.activemember;
+package com.beifeng.transformer.mapreduce.activemembers;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;

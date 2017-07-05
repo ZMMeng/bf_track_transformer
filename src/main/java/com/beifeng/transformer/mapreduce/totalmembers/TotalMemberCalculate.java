@@ -1,0 +1,263 @@
+package com.beifeng.transformer.mapreduce.totalmembers;
+
+import com.beifeng.common.DateEnum;
+import com.beifeng.common.GlobalConstants;
+import com.beifeng.transformer.model.dimension.basic.DateDimension;
+import com.beifeng.utils.JdbcManager;
+import com.beifeng.utils.TimeUtil;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.log4j.Logger;
+
+import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 计算总会员数
+ * Created by Administrator on 2017/7/4.
+ */
+public class TotalMemberCalculate {
+
+    //日志打印对象
+    private static final Logger logger = Logger.getLogger(TotalMemberCalculate.class);
+    //数据库连接对象
+    Connection conn = null;
+    //预处理对象
+    PreparedStatement pstmt = null;
+    //结果集对象
+    ResultSet rs = null;
+
+    /**
+     * 计算总会员
+     * 当天的总会员数 = 前一天的总会员数 + 当天的新增会员数
+     *
+     * @param conf
+     */
+    public void calculateTotalMembers(Configuration conf) {
+
+        try {
+            //先处理stats_user表
+            //获取当天所对应的时间戳，yyyy年MM月dd日 00:00:00.000
+            long date = TimeUtil.parseString2Long(conf.get(GlobalConstants.RUNNING_DATE_PARAMS));
+            //获取当天的日期维度信息
+            DateDimension todayDimension = DateDimension.buildDate(date, DateEnum.DAY);
+            //获取前一天的日期维度信息
+            DateDimension yesterdayDimension = DateDimension.buildDate(date - GlobalConstants
+                    .MILLISECONDS_OF_DAY, DateEnum.DAY);
+            //获取日期id
+            conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+            //获取前一天的日期id
+            int yesterdayDimensionId = getDimensionIdByDate(yesterdayDimension);
+            //获取当天的日期id
+            int todayDimensionId = getDimensionIdByDate(todayDimension);
+            //获取前一天的原始数据，存储格式为dateid_platformid = totalmembers
+            //该Map集合用于存储到目前为止的总用户数(分平台)
+            Map<String, Integer> oldValueMap = new HashMap<String, Integer>();
+
+            //获取前一天的总会员数，并放入oldValueMap中
+            if (yesterdayDimensionId != -1) {
+                StoreYesterdayTotalMembers2Map(oldValueMap, yesterdayDimensionId);
+            }
+            //添加当天的新会员数，并计算当天的总会员数，并放入到oldValueMap中
+            addTodayNewMembers2Map(oldValueMap, todayDimensionId);
+            //更新stats_user表
+            updateStatsUserTable(oldValueMap, todayDimensionId);
+
+            //再处理stats_device_browser表
+            //清空oldMapValue
+            oldValueMap.clear();
+            //获取前一天的总会员数，并放入oldValueMap中
+            if (yesterdayDimensionId != -1) {
+                StoreYesterdayBrowserTotalMembers2Map(oldValueMap, yesterdayDimensionId);
+            }
+            //添加当天的新会员数，并计算当天的总会员数，并放入到oldValueMap中
+            addTodayBrowserNewMembers2Map(oldValueMap, todayDimensionId);
+            //更新stats_device_browser表
+            updateStatsDeviceBrowserTable(oldValueMap, todayDimensionId);
+        } catch (SQLException e) {
+            logger.error("计算总会员数出现异常", e);
+        } finally {
+            JdbcManager.close(conn, pstmt, rs);
+        }
+
+    }
+
+    /**
+     * 获取给定日期在dimension_date表中对应的id
+     *
+     * @param dateDimension 给定日期对应的日期维度对象
+     * @return 给定日期在dimension_date表中对应的id，如果没有找到，则返回-1
+     * @throws SQLException
+     */
+    private int getDimensionIdByDate(DateDimension dateDimension) throws SQLException {
+        //存储给定日期在dimension_date表中对应的id
+        int dateDimensionId = -1;
+        //进行数据库查询
+        pstmt = conn.prepareStatement("select id from dimension_date where year=? and season=? and month=? " +
+                "and week=? and day=? and type=? and calendar=?");
+        int i = 0;
+        pstmt.setInt(++i, dateDimension.getYear());
+        pstmt.setInt(++i, dateDimension.getSeason());
+        pstmt.setInt(++i, dateDimension.getMonth());
+        pstmt.setInt(++i, dateDimension.getWeek());
+        pstmt.setInt(++i, dateDimension.getDay());
+        pstmt.setString(++i, dateDimension.getType());
+        pstmt.setDate(++i, new Date(dateDimension.getCalender().getTime()));
+        rs = pstmt.executeQuery();
+        //判断结果集中是否有记录
+        if (rs.next()) {
+            dateDimensionId = rs.getInt(1);
+        }
+        return dateDimensionId;
+    }
+
+    /**
+     * 从stats_user表中获取给定日期前一日的总会员数(按平台分类)，并按平台存入Map集合中
+     *
+     * @param map                  存储平台以及其对应的会员数
+     * @param yesterdayDimensionId 前一日在dimension_date表中的id
+     * @throws SQLException
+     */
+    private void StoreYesterdayTotalMembers2Map(Map<String, Integer> map, int yesterdayDimensionId) throws
+            SQLException {
+        pstmt = conn.prepareStatement("select platform_dimension_id,total_members from stats_user " +
+                "where date_dimension_id=?");
+        pstmt.setInt(1, yesterdayDimensionId);
+        rs = pstmt.executeQuery();
+
+        while (rs.next()) {
+            int platformId = rs.getInt("platform_dimension_id");
+            int totalMembers = rs.getInt("total_install_users");
+            //将查询出来的平台名称以及相应的总会员数放入到Map集合中
+            map.put("" + platformId, totalMembers);
+        }
+    }
+
+    /**
+     * 从stats_device_browser表中获取给定日期前一日的总会员数(按平台和浏览器分类)，并按平台存入Map集合中
+     *
+     * @param map                  存储平台以及其对应的会员数
+     * @param yesterdayDimensionId 前一日在dimension_date表中的id
+     * @throws SQLException
+     */
+    private void StoreYesterdayBrowserTotalMembers2Map(Map<String, Integer> map, int
+            yesterdayDimensionId) throws SQLException {
+        pstmt = conn.prepareStatement("select platform_dimension_id,browser_dimension_id," +
+                "total_members from stats_device_browser where date_dimension_id=?");
+        pstmt.setInt(1, yesterdayDimensionId);
+        rs = pstmt.executeQuery();
+
+        while (rs.next()) {
+            int platformId = rs.getInt("platform_dimension_id");
+            int browserId = rs.getInt("browser_dimension_id");
+            int totalMembers = rs.getInt("total_install_users");
+            //将查询出来的平台名称以及相应的总会员数放入到Map集合中
+            map.put(platformId + "_" + browserId, totalMembers);
+        }
+    }
+
+
+    /**
+     * 获取当天的新增会员(按平台分类)，并与Map集合中存有前一天的总会员数相加(按平台分类)，所得值存入Map集合中
+     *
+     * @param map              存储平台以及其对应的会员数
+     * @param todayDimensionId 当天在dimension_date表中的id
+     * @throws SQLException
+     */
+    private void addTodayNewMembers2Map(Map<String, Integer> map, int todayDimensionId) throws
+            SQLException {
+        pstmt = conn.prepareStatement("select platform_dimension_id,new_members from stats_user where " +
+                "date_dimension_id=?");
+        pstmt.setInt(1, todayDimensionId);
+        rs = pstmt.executeQuery();
+        while (rs.next()) {
+            int platformId = rs.getInt("platform_dimension_id");
+            int newMembers = rs.getInt("new_members");
+            //查看该平台是否已有会员
+            if (map.containsKey(platformId)) {
+                //该平台已有会员，将前一天的总会员数加上当天的新增用户数，即为当天的总会员数
+                newMembers += map.get("" + platformId);
+            }
+            //将当天的总会员数存入Map集合
+            map.put("" + platformId, newMembers);
+        }
+
+    }
+
+    /**
+     * 获取当天的新增会员(按平台和浏览器分类)，并与Map集合中存有前一天的总会员数相加(按平台和浏览器分类)，所得值存入Map集合中
+     *
+     * @param map              存储平台和浏览器以及其对应的会员数
+     * @param todayDimensionId 当天在dimension_date表中的id
+     * @throws SQLException
+     */
+    private void addTodayBrowserNewMembers2Map(Map<String, Integer> map, int todayDimensionId) throws
+            SQLException {
+        pstmt = conn.prepareStatement("select platform_dimension_id,browser_dimension_id,new_members from " +
+                "stats_device_browser where date_dimension_id=?");
+        pstmt.setInt(1, todayDimensionId);
+        rs = pstmt.executeQuery();
+        while (rs.next()) {
+            int platformId = rs.getInt("platform_dimension_id");
+            int browserId = rs.getInt("browser_dimension_id");
+            int newMembers = rs.getInt("new_members");
+            String key = platformId + "_" + browserId;
+            //查看该平台是否已有用户
+            if (map.containsKey(key)) {
+                //该平台已有用户，将前一天的总用户数加上当天的新增用户数，即为当天的总用户数
+                newMembers += map.get(key);
+            }
+            //将当天的总用户数存入Map集合
+            map.put(key, newMembers);
+        }
+    }
+
+    /**
+     * 更新stats_user表，将当天的总用户数插入stats_user表中
+     *
+     * @param map
+     * @param todayDimensionId
+     * @throws SQLException
+     */
+    private void updateStatsUserTable(Map<String, Integer> map, int todayDimensionId) throws SQLException {
+        pstmt = conn.prepareStatement("insert into stats_user (platform_dimension_id,date_dimension_id," +
+                "total_members) values (?,?,?) on duplicate key update total_members=?");
+
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
+            pstmt.setInt(1, Integer.valueOf(entry.getKey()));
+            pstmt.setInt(2, todayDimensionId);
+            pstmt.setInt(3, entry.getValue());
+            pstmt.setInt(4, entry.getValue());
+            pstmt.execute();
+        }
+    }
+
+    /**
+     * 更新stats_device_browser表，将当天的总用户数插入stats_user表中
+     *
+     * @param map
+     * @param todayDimensionId
+     * @throws SQLException
+     */
+    private void updateStatsDeviceBrowserTable(Map<String, Integer> map, int todayDimensionId)
+            throws SQLException {
+        pstmt = conn.prepareStatement("insert into stats_device_browser (platform_dimension_id," +
+                "browser_dimension_id,date_dimension_id,total_members) values (?,?,?,?) on duplicate " +
+                "key update total_members=?");
+
+        int platformId, browserId;
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
+            //先从Map集合的key(platformId_browserId)中获取platformId和browserId
+            String[] strs = entry.getKey().split("_");
+            platformId = Integer.valueOf(strs[0]);
+            browserId = Integer.valueOf(strs[1]);
+            //更新数据库
+            pstmt.setInt(1, platformId);
+            pstmt.setInt(2, browserId);
+            pstmt.setInt(3, todayDimensionId);
+            pstmt.setInt(4, entry.getValue());
+            pstmt.setInt(5, entry.getValue());
+            pstmt.execute();
+        }
+    }
+}

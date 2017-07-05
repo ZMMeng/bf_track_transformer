@@ -70,4 +70,27 @@ public class JdbcManager {
             }
         }
     }
+
+    /**
+     * 关闭数据库相关资源
+     *
+     * @param pstmt 预处理对象
+     * @param rs 结果集对象
+     */
+    public static void close(PreparedStatement pstmt, ResultSet rs){
+        if(rs != null){
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                //nothing
+            }
+        }
+        if(pstmt != null){
+            try {
+                pstmt.close();
+            } catch (SQLException e) {
+                //nothing
+            }
+        }
+    }
 }

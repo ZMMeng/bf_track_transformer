@@ -20,10 +20,22 @@
     </property>
     <property>
         <name>collector_active_member</name>
-        <value>com.beifeng.transformer.mapreduce.activemember.ActiveMemberCollector</value>
+        <value>com.beifeng.transformer.mapreduce.activemembers.ActiveMemberCollector</value>
     </property>
     <property>
         <name>collector_browser_active_member</name>
-        <value>com.beifeng.transformer.mapreduce.activemember.ActiveMemberCollector</value>
+        <value>com.beifeng.transformer.mapreduce.activemembers.ActiveMemberCollector</value>
+    </property>
+    <property>
+        <name>collector_new_member</name>
+        <value>com.beifeng.transformer.mapreduce.newmembers.NewMemberCollector</value>
+    </property>
+    <property>
+        <name>collector_browser_new_member</name>
+        <value>com.beifeng.transformer.mapreduce.newmembers.NewMemberCollector</value>
+    </property>
+    <property>
+        <name>collector_insert_member_info</name>
+        <value>com.beifeng.transformer.mapreduce.newmembers.NewMemberCollector</value>
     </property>
 </configuration>

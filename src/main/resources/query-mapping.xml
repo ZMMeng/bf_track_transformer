@@ -72,4 +72,37 @@
             ) values (?,?,?,?,?) on duplicate key update active_members=?
         </value>
     </property>
+    <property>
+        <name>new_member</name>
+        <value>
+            insert into stats_user (
+            platform_dimension_id,
+            date_dimension_id,
+            new_members,
+            created
+            ) values (?,?,?,?) on duplicate key update new_members=?
+        </value>
+    </property>
+    <property>
+        <name>browser_new_member</name>
+        <value>
+            insert into stats_device_browser (
+            platform_dimension_id,
+            date_dimension_id,
+            browser_dimension_id,
+            new_members,
+            created
+            ) values (?,?,?,?,?) on duplicate key update new_members=?
+        </value>
+    </property>
+    <property>
+        <name>insert_member_info</name>
+        <value>
+            insert into member_info (
+            member_id,
+            last_visit_date,
+            created
+            ) values (?,?,?) on duplicate key update last_visit_date=?
+        </value>
+    </property>
 </configuration>
