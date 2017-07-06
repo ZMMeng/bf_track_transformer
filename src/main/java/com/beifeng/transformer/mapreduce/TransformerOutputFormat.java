@@ -102,11 +102,12 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
             try {
                 //获取value对应的KPI值
                 KpiType kpi = value.getKpi();
+                //System.out.println(kpi.name);
                 PreparedStatement pstmt;
                 //记录批量执行数
                 int count = 1;
                 //首先判断缓存中是否有该KPI值
-                if (map.get(key) == null) {
+                if (map.get(kpi) == null) {
                     //缓存中没有该KPI值
                     //使用KPI值进行区分，返回的sql保存在Hadoop的配置信息中
                     pstmt = conn.prepareStatement(conf.get(kpi.name));
@@ -152,7 +153,7 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
         public void close(TaskAttemptContext context) throws IOException, InterruptedException {
             try {
                 for (Map.Entry<KpiType, PreparedStatement> entry : map.entrySet()) {
-                    entry.getValue().executeUpdate();
+                    entry.getValue().executeBatch();
                 }
             } catch (SQLException e) {
                 logger.error("执行executeUpdate方法异常", e);

@@ -44,7 +44,8 @@ public class SessionsCollector implements IOutputCollector {
             case HOURLY_SESSIONS:
             case HOURLY_SESSIONS_LENGTH:
                 MapWritable map = mapWritableValue.getValue();
-                pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon().getPlatform()));
+                pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon()
+                        .getPlatform()));
                 pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon().getDate()));
                 pstmt.setInt(++i, converter.getDimensionIdByValue(new KpiDimension(mapWritableValue.getKpi
                         ().name)));
