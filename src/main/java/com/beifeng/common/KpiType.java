@@ -33,7 +33,7 @@ public enum KpiType {
     //按小时统计会话个数KPI
     HOURLY_SESSIONS("hourly_sessions"),
     //按小时统计会话长度KPI
-    HOURLY_SESSIONS_LENGTH("hour_sessions_length"),
+    HOURLY_SESSIONS_LENGTH("hourly_sessions_length"),
     ;
 
     public final String name;

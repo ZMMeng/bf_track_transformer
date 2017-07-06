@@ -42,6 +42,7 @@ public class HourlyActiveUserCollector implements IOutputCollector {
         pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon().getPlatform()));
         pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon().getDate()));
         pstmt.setInt(++i, converter.getDimensionIdByValue(statsUserDimension.getStatsCommon().getKpi()));
+        //设置每小时情况
         for (i++; i < 28; i++) {
             int v = ((IntWritable) (map.get(new IntWritable(i - 4)))).get();
             pstmt.setInt(i, v);
