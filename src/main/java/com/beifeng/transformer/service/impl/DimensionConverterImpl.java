@@ -81,9 +81,11 @@ public class DimensionConverterImpl implements IDimensionConverter {
                 sqls = buildPlatformSql();
             } else if (dimension instanceof BrowserDimension) {
                 sqls = buildBrowserSql();
-            }else if(dimension instanceof KpiDimension){
+            } else if (dimension instanceof KpiDimension) {
                 sqls = buildKpiSql();
-            }else {
+            } else if (dimension instanceof LocationDimension) {
+                sqls = buildLocationSql();
+            } else {
                 throw new IOException("不支持此种dimension的id的获取：" + dimension.getClass());
             }
 
@@ -155,7 +157,7 @@ public class DimensionConverterImpl implements IDimensionConverter {
             BrowserDimension browser = (BrowserDimension) dimension;
             //添加字段值(id除外)
             sb.append(browser.getBrowserName()).append(browser.getBrowserVersion());
-        } else if(dimension instanceof KpiDimension){
+        } else if (dimension instanceof KpiDimension) {
             //dimension的类型是KpiDimension
             //类型信息
             sb.append("kpi_dimension");
@@ -163,6 +165,16 @@ public class DimensionConverterImpl implements IDimensionConverter {
             KpiDimension kpi = (KpiDimension) dimension;
             //添加字段值(id除外)
             sb.append(kpi.getKpiName());
+        } else if (dimension instanceof LocationDimension) {
+            //dimension的类型是LocationDimension
+            //类型信息
+            sb.append("location_dimension");
+            //强转
+            LocationDimension location = (LocationDimension) dimension;
+            //添加字段值(id除外)
+            sb.append(location.getCountry());
+            sb.append(location.getProvince());
+            sb.append(location.getCity());
         }
 
         //判断sb是否为空
@@ -205,11 +217,18 @@ public class DimensionConverterImpl implements IDimensionConverter {
             BrowserDimension browser = (BrowserDimension) dimension;
             pstmt.setString(++i, browser.getBrowserName());
             pstmt.setString(++i, browser.getBrowserVersion());
-        } else if (dimension instanceof KpiDimension){
+        } else if (dimension instanceof KpiDimension) {
             //dimension的类型是KpiDimension
             //强转
             KpiDimension kpi = (KpiDimension) dimension;
             pstmt.setString(++i, kpi.getKpiName());
+        } else if (dimension instanceof LocationDimension) {
+            //dimension的类型是LocationDimension
+            //强转
+            LocationDimension location = (LocationDimension) dimension;
+            pstmt.setString(++i, location.getCountry());
+            pstmt.setString(++i, location.getProvince());
+            pstmt.setString(++i, location.getCity());
         }
     }
 
@@ -250,11 +269,23 @@ public class DimensionConverterImpl implements IDimensionConverter {
 
     /**
      * 创建kpi dimension的相关sql语句
+     *
      * @return
      */
     private String[] buildKpiSql() {
         String querySql = "select id from dimension_kpi where kpi_name=?;";
         String insertSql = "insert into dimension_kpi (kpi_name) values (?);";
+        return new String[]{querySql, insertSql};
+    }
+
+    /**
+     * 创建location dimension的相关sql语句
+     *
+     * @return
+     */
+    private String[] buildLocationSql() {
+        String querySql = "select id from dimension_location where country=? and province=? and city=?;";
+        String insertSql = "insert into dimension_location (country,province,city) values (?,?,?);";
         return new String[]{querySql, insertSql};
     }
 

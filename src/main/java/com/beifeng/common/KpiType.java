@@ -36,6 +36,8 @@ public enum KpiType {
     HOURLY_SESSIONS_LENGTH("hourly_sessions_length"),
     //统计浏览器维度的页面浏览量KPI
     PAGE_VIEW("page_view"),
+    //统计地域信息的KPI
+    LOCATION("location"),
     ;
 
     public final String name;

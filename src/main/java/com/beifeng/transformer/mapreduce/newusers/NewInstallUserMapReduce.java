@@ -44,6 +44,7 @@ import java.util.*;
  */
 public class NewInstallUserMapReduce extends Configured implements Tool {
 
+    //HBase配置信息
     private static final Configuration conf = HBaseConfiguration.create();
 
     public static class NewInstallUserMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {

@@ -42,6 +42,8 @@ import java.util.List;
  */
 public class PageViewMapReduce extends Configured implements Tool {
 
+
+
     public static class PageViewMapper extends TableMapper<StatsUserDimension, NullWritable> {
 
         //日志打印对象

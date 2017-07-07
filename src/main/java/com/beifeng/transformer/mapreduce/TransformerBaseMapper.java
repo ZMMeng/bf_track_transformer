@@ -43,6 +43,13 @@ public class TransformerBaseMapper<KEYOUT, VLAUEOUT> extends TableMapper<KEYOUT,
         this.conf = context.getConfiguration();
     }
 
+    /**
+     * 显示MapReduce Job的Map任务阶段完成的信息
+     *
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
         super.cleanup(context);
@@ -115,6 +122,46 @@ public class TransformerBaseMapper<KEYOUT, VLAUEOUT> extends TableMapper<KEYOUT,
      */
     public String getBrowserVersion(Result value) {
         return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_BROWSER_VERSION);
+    }
+
+    /**
+     * 获取国家名
+     *
+     * @param value
+     * @return
+     */
+    public String getCountry(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_COUNTRY);
+    }
+
+    /**
+     * 获取省份名
+     *
+     * @param value
+     * @return
+     */
+    public String getProvince(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_PROVINCE);
+    }
+
+    /**
+     * 获取城市名
+     *
+     * @param value
+     * @return
+     */
+    public String getCity(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_CITY);
+    }
+
+    /**
+     * 获取会话ID
+     *
+     * @param value
+     * @return
+     */
+    public String getSessionId(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_SESSION_ID);
     }
 
     /**
