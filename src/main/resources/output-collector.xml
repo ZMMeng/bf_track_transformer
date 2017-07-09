@@ -66,4 +66,8 @@
         <name>collector_location</name>
         <value>com.beifeng.transformer.mapreduce.location.LocationCollector</value>
     </property>
+    <property>
+        <name>collector_inbound</name>
+        <value>com.beifeng.transformer.mapreduce.inbound.InboundCollector</value>
+    </property>
 </configuration>

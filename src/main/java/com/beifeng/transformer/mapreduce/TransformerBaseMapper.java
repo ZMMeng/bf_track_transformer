@@ -165,6 +165,16 @@ public class TransformerBaseMapper<KEYOUT, VLAUEOUT> extends TableMapper<KEYOUT,
     }
 
     /**
+     * 获取外链
+     *
+     * @param value
+     * @return
+     */
+    public String getRefererUrl(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_REFERENCE_URL);
+    }
+
+    /**
      * 获取value中column列的值
      *
      * @param value

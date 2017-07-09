@@ -38,6 +38,10 @@ public enum KpiType {
     PAGE_VIEW("page_view"),
     //统计地域信息的KPI
     LOCATION("location"),
+    //统计外链分析的活跃用户和会话总数KPI
+    INBOUND("inbound"),
+    //统计外链分析的跳出会话个数的KPI
+    INBOUND_BOUNCE("inbound_bounce"),
     ;
 
     public final String name;

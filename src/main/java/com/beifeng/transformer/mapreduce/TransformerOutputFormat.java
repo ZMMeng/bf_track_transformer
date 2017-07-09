@@ -4,8 +4,8 @@ import com.beifeng.common.GlobalConstants;
 import com.beifeng.common.KpiType;
 import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.model.value.BaseStatsValueWritable;
-import com.beifeng.transformer.service.IDimensionConverter;
-import com.beifeng.transformer.service.impl.DimensionConverterImpl;
+import com.beifeng.transformer.service.rpc.IDimensionConverter;
+import com.beifeng.transformer.service.rpc.client.DimensionConverterClient;
 import com.beifeng.utils.JdbcManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.*;
@@ -37,7 +37,8 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
         Configuration conf = context.getConfiguration();
         Connection conn = null;
         //创建操作dimension表的对象
-        IDimensionConverter converter = new DimensionConverterImpl();
+        //IDimensionConverter converter = new DimensionConverterImpl();
+        IDimensionConverter converter = DimensionConverterClient.createDimensionConverter(conf);
         try {
             //获取connection
             conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
@@ -185,6 +186,9 @@ public class TransformerOutputFormat extends OutputFormat<BaseDimension,
                     }
                 }
             }
+
+            //关闭RPC连接
+            DimensionConverterClient.stopDimensionConverterProxy(this.converter);
         }
     }
 }

@@ -337,4 +337,29 @@
             bounce_sessions=?
         </value>
     </property>
+    <property>
+        <name>inbound</name>
+        <value>
+            insert into stats_inbound (
+            platform_dimension_id,
+            date_dimension_id,
+            inbound_dimension_id,
+            active_users,
+            sessions,
+            created
+            ) values (?,?,?,?,?,?) on duplicate key update active_users=? and sessions=?
+        </value>
+    </property>
+    <property>
+        <name>inbound</name>
+        <value>
+            insert into stats_inbound (
+            platform_dimension_id,
+            date_dimension_id,
+            inbound_dimension_id,
+            bounce_sessions,
+            created
+            ) values (?,?,?,?,?) on duplicate key update bounce_sessions=?
+        </value>
+    </property>
 </configuration>
