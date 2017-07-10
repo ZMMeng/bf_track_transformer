@@ -1,13 +1,12 @@
 package com.beifeng.transformer.mapreduce.newmembers;
 
 import com.beifeng.common.GlobalConstants;
-import com.beifeng.common.KpiType;
 import com.beifeng.transformer.mapreduce.IOutputCollector;
 import com.beifeng.transformer.model.dimension.StatsUserDimension;
 import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.model.value.BaseStatsValueWritable;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
-import com.beifeng.transformer.service.IDimensionConverter;
+import com.beifeng.transformer.service.rpc.IDimensionConverter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;

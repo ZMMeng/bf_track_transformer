@@ -233,8 +233,8 @@ public abstract class TransformerBaseMapReduce extends Configured implements Too
     /**
      * 执行MapReduce Job之后运行的方法
      *
-     * @param job
-     * @param error
+     * @param job MapReduce Job
+     * @param error MapReduce Job运行过程中可能出现的异常
      * @throws IOException
      */
     protected void afterRunJob(Job job, Throwable error) throws IOException {
@@ -285,7 +285,7 @@ public abstract class TransformerBaseMapReduce extends Configured implements Too
     /**
      * 获取HBase的过滤器
      *
-     * @return
+     * @return 过滤器
      */
     protected Filter fetchHbaseFilter() {
         return null;

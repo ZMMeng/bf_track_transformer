@@ -75,6 +75,26 @@ public class TransformerBaseMapper<KEYOUT, VLAUEOUT> extends TableMapper<KEYOUT,
     }
 
     /**
+     * 获取当前URL
+     *
+     * @param value
+     * @return
+     */
+    public String getCurrentUrl(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_CURRENT_URL);
+    }
+
+    /**
+     * 获取会员ID
+     *
+     * @param value
+     * @return
+     */
+    public String getMemberId(Result value) {
+        return fetchValue(value, EventLogConstants.LOG_COLUMN_NAME_MEMBER_ID);
+    }
+
+    /**
      * 获取UUID
      *
      * @param value

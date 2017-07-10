@@ -38,13 +38,10 @@ import java.util.*;
  */
 public class ActiveUserMapReduce extends TransformerBaseMapReduce {
 
-    //日志打印对象
-    private static final Logger logger = Logger.getLogger(ActiveUserMapReduce.class);
-    //HBase配置信息
-    private static final Configuration conf = HBaseConfiguration.create();
-
     public static class ActiveUserMapper extends TransformerBaseMapper<StatsUserDimension, TimeOutputValue> {
 
+        //日志打印对象
+        private static final Logger logger = Logger.getLogger(ActiveUserMapper.class);
         //Map输出的键
         private StatsUserDimension mapOutputKey = new StatsUserDimension();
         //Map输出的值

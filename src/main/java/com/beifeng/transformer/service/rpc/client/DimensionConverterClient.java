@@ -3,11 +3,17 @@ package com.beifeng.transformer.service.rpc.client;
 import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.service.rpc.IDimensionConverter;
 import com.beifeng.transformer.service.rpc.server.DimensionConverterImpl;
+import com.beifeng.transformer.service.rpc.server.DimensionConverterServer;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,9 +35,10 @@ public class DimensionConverterClient {
     public static IDimensionConverter createDimensionConverter(Configuration conf) throws IOException {
 
         //创建操作
+        String[] cf = fetchDimensionConverterConfiguration(conf);
         //获取端口号和IP地址
-        int port = 0;
-        String address = "";
+        int port = Integer.valueOf(cf[1]);
+        String address = cf[0];
         //从代理类创建converter对象
         IDimensionConverter converter = new InnerDimensionConverterProxy(conf, address, port);
         return converter;
@@ -46,6 +53,44 @@ public class DimensionConverterClient {
         if (proxy != null) {
             InnerDimensionConverterProxy innerProxy = (InnerDimensionConverterProxy) proxy;
             RPC.stopProxy(innerProxy);
+        }
+    }
+
+    /**
+     * 读取配置信息
+     *
+     * @param conf
+     * @return
+     * @throws IOException
+     */
+    public static String[] fetchDimensionConverterConfiguration(Configuration conf) throws IOException {
+        FileSystem fs = null;
+        BufferedReader br = null;
+        try{
+            fs = FileSystem.get(conf);
+            br = new BufferedReader(new InputStreamReader(fs.open(new Path(DimensionConverterServer
+                    .CONFIG_SAVE_PATH))));
+            String[] result = new String[2];
+            //IP地址
+            result[0] = br.readLine().trim();
+            //端口号
+            result[1] = br.readLine().trim();
+            return result;
+        } finally {
+            if(br != null){
+                try {
+                    br.close();
+                }catch (Exception e){
+                    //nothing
+                }
+            }
+            /*if(fs != null){
+                try{
+                    fs.close();
+                }catch (Exception e){
+                    //nothing
+                }
+            }*/
         }
     }
 

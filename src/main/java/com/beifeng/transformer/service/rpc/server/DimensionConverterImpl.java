@@ -2,6 +2,7 @@ package com.beifeng.transformer.service.rpc.server;
 
 import com.beifeng.transformer.model.dimension.basic.*;
 import com.beifeng.transformer.service.rpc.IDimensionConverter;
+import com.beifeng.utils.JdbcManager;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.log4j.Logger;
 
@@ -325,20 +326,7 @@ public class DimensionConverterImpl implements IDimensionConverter {
                 return rs.getInt(1);
             }
         } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    //nothing
-                }
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                    //nothing
-                }
-            }
+            JdbcManager.close(null, pstmt, rs);
         }
         throw new RuntimeException("从数据库中获取id失败");
     }

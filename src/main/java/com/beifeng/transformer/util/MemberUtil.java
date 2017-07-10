@@ -18,7 +18,7 @@ import java.util.Map;
 public class MemberUtil {
 
     //缓存memberId查询结果
-    private static Map<String, Boolean> cache = new LinkedHashMap<String, Boolean>(){
+    private static Map<String, Boolean> cache = new LinkedHashMap<String, Boolean>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
             //最多保存10000条数据
@@ -28,6 +28,7 @@ public class MemberUtil {
 
     /**
      * 删除member_info表中，指定日期的数据
+     *
      * @param date
      * @param conn
      * @throws SQLException
@@ -38,8 +39,8 @@ public class MemberUtil {
             pstmt = conn.prepareStatement("delete from member_info where created=?");
             pstmt.setString(1, date);
             pstmt.execute();
-        }finally {
-            if(pstmt != null){
+        } finally {
+            if (pstmt != null) {
                 try {
                     pstmt.close();
                 } catch (SQLException e) {
@@ -51,12 +52,13 @@ public class MemberUtil {
 
     /**
      * 判断member id的格式是否正常
+     *
      * @param memberId
      * @return 正常返回true，否则返回false
      */
-    public static boolean isValidateMemberId(String memberId){
+    public static boolean isValidateMemberId(String memberId) {
         //先判断memberId是否非空
-        if(StringUtils.isBlank(memberId)){
+        if (StringUtils.isBlank(memberId)) {
             //memberId为空，直接返回false
             return false;
         }
@@ -66,21 +68,22 @@ public class MemberUtil {
 
     /**
      * 判断memberId是否是一个新的会员id
+     *
      * @param memberId 需要判断的memberId
-     * @param conn 数据库连接
+     * @param conn     数据库连接
      * @return 是则返回true，否则返回false
      * @throws SQLException
      */
     public static boolean isNewMemberId(String memberId, Connection conn) throws SQLException {
         //首先判断memberId是否非空
-        if(StringUtils.isBlank(memberId)){
+        if (StringUtils.isBlank(memberId)) {
             //memberId为空直接返回false
             return false;
         }
 
         //判断该memberId是否已进行数据库查询
         Boolean isCheck = cache.get(memberId);
-        if(isCheck != null){
+        if (isCheck != null) {
             //该memberId已进行数据库查询，则直接返回查询结果
             return isCheck.booleanValue();
         }
@@ -91,10 +94,10 @@ public class MemberUtil {
         String sql = "select member_id,last_visit_date from member_info where member_id=?";
 
         try {
-            pstmt= conn.prepareStatement(sql);
+            pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, memberId);
             rs = pstmt.executeQuery();
-            if(rs.next()){
+            if (rs.next()) {
                 //在member_info表中有该条记录，表示不是新记录，直接返回false
                 cache.put(memberId, false);
                 return false;
@@ -102,8 +105,8 @@ public class MemberUtil {
             //在member_info表中没有该条记录，表示是新的会员记录，返回true
             cache.put(memberId, true);
             return true;
-        } finally{
-            JdbcManager.close(pstmt, rs);
+        } finally {
+            JdbcManager.close(null, pstmt, rs);
         }
     }
 }

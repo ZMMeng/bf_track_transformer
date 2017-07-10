@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -26,7 +27,7 @@ public class DimensionConverterServer {
     private AtomicBoolean isRunning = new AtomicBoolean(false);
     //服务对象
     private Server server = null;
-
+    //配置对象
     private Configuration conf;
 
     public DimensionConverterServer(Configuration conf) {
@@ -74,7 +75,7 @@ public class DimensionConverterServer {
      * 启动服务
      */
     public void startServer() {
-        logger.info("启动成功");
+        logger.info("开始启动服务");
         synchronized (this) {
             if (isRunning.get()) {
                 //启动完成
@@ -91,7 +92,7 @@ public class DimensionConverterServer {
                 }
                 //获取IP和端口号
                 int port = server.getPort();
-                String address = server.getListenerAddress().getHostName();
+                String address = InetAddress.getLocalHost().getHostAddress();
 
                 saveListenerAddress(address, port);
 

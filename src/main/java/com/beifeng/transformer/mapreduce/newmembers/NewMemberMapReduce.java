@@ -4,8 +4,8 @@ import com.beifeng.common.DateEnum;
 import com.beifeng.common.EventLogConstants;
 import com.beifeng.common.GlobalConstants;
 import com.beifeng.common.KpiType;
-import com.beifeng.transformer.mapreduce.TransformerOutputFormat;
-import com.beifeng.transformer.mapreduce.activemembers.ActiveMemberMapReduce;
+import com.beifeng.transformer.mapreduce.TransformerBaseMapReduce;
+import com.beifeng.transformer.mapreduce.TransformerBaseMapper;
 import com.beifeng.transformer.mapreduce.totalmembers.TotalMemberCalculate;
 import com.beifeng.transformer.model.dimension.StatsCommonDimension;
 import com.beifeng.transformer.model.dimension.StatsUserDimension;
@@ -17,27 +17,18 @@ import com.beifeng.transformer.model.value.map.TimeOutputValue;
 import com.beifeng.transformer.model.value.reduce.MapWritableValue;
 import com.beifeng.transformer.util.MemberUtil;
 import com.beifeng.utils.JdbcManager;
-import com.beifeng.utils.TimeUtil;
-import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -51,19 +42,12 @@ import java.util.Set;
  * 统计新增会员的MapReduce
  * Created by Administrator on 2017/7/5.
  */
-public class NewMemberMapReduce extends Configured implements Tool {
+public class NewMemberMapReduce extends TransformerBaseMapReduce {
 
-    //日志打印对象
-    private static final Logger logger = Logger.getLogger(ActiveMemberMapReduce.class);
-    //HBase配置信息
-    private static final Configuration conf = HBaseConfiguration.create();
-
-    public static class NewMemberMapper extends TableMapper<StatsUserDimension, TimeOutputValue> {
+    public static class NewMemberMapper extends TransformerBaseMapper<StatsUserDimension, TimeOutputValue> {
 
         //打印日志对象
         private static final Logger logger = Logger.getLogger(NewMemberMapper.class);
-        //HBase表列簇的二进制数据
-        private byte[] family = Bytes.toBytes(EventLogConstants.HBASE_COLUMN_FAMILY_NAME);
         //Map输出的键
         private StatsUserDimension mapOutputKey = new StatsUserDimension();
         //Map输出的值
@@ -74,6 +58,10 @@ public class NewMemberMapReduce extends Configured implements Tool {
         private KpiDimension newMemberOfBrowserKpi = new KpiDimension(KpiType.BROWSER_NEW_MEMBER.name);
         //数据库连接
         private Connection conn = null;
+        //
+        private String memberId, serverTime, platform, browserName, browserVersion;
+        //
+        private long longOfTime;
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -95,8 +83,7 @@ public class NewMemberMapReduce extends Configured implements Tool {
                 InterruptedException {
 
             //从HBase表中读取memberID
-            String memberId = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
-                    .LOG_COLUMN_NAME_MEMBER_ID)));
+            memberId = getMemberId(value);
             //判断memberId是否是第一次访问，即判断该memberId是否是新增会员
             try {
                 if (!MemberUtil.isValidateMemberId(memberId) || !MemberUtil.isNewMemberId(memberId, conn)) {
@@ -109,11 +96,9 @@ public class NewMemberMapReduce extends Configured implements Tool {
             }
 
             //从HBase表中读取服务器时间
-            String serverTime = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
-                    .LOG_COLUMN_NAME_SERVER_TIME)));
+            serverTime = getServerTime(value);
             //从HBase表中读取平台信息
-            String platform = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
-                    .LOG_COLUMN_NAME_PLATFORM)));
+            platform = getPlatform(value);
 
             //过滤无效数据，会员ID、服务器时间和平台信息有任意一个为空或者服务器时间非数字，则视该条记录为无效记录
             if (StringUtils.isBlank(serverTime) || !StringUtils.isNumeric(serverTime.trim()) || StringUtils
@@ -124,7 +109,7 @@ public class NewMemberMapReduce extends Configured implements Tool {
             }
 
             //将服务器时间字符串转化为时间戳
-            long longOfTime = Long.valueOf(serverTime.trim());
+            longOfTime = Long.valueOf(serverTime.trim());
             //设置Map输出值对象timeOutputValue的属性值，只需要id
             mapOutputValue.setId(memberId);
             //构建日期维度信息
@@ -133,10 +118,8 @@ public class NewMemberMapReduce extends Configured implements Tool {
             List<PlatformDimension> platformDimensions = PlatformDimension.buildList(platform);
 
             //从HBase表中读取浏览器的名称以及版本号，这两个值可以为空
-            String browserName = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
-                    .LOG_COLUMN_NAME_BROWSER_NAME)));
-            String browserVersion = Bytes.toString(value.getValue(family, Bytes.toBytes(EventLogConstants
-                    .LOG_COLUMN_NAME_BROWSER_VERSION)));
+            browserName = getBrowserName(value);
+            browserVersion = getBrowserVersion(value);
             //构建浏览器维度信息
             List<BrowserDimension> browserDimensions = BrowserDimension.buildList(browserName,
                     browserVersion);
@@ -162,13 +145,7 @@ public class NewMemberMapReduce extends Configured implements Tool {
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException {
             //关闭数据库连接
-            if(conn != null){
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    //nothing
-                }
-            }
+            JdbcManager.close(conn, null, null);
         }
     }
 
@@ -212,123 +189,90 @@ public class NewMemberMapReduce extends Configured implements Tool {
         }
     }
 
-    public int run(String[] args) throws Exception {
-        //获取HBase配置信息
-        Configuration conf = this.getConf();
-        //向conf添加关于输出到MySQL的配置信息
-        conf.addResource("output-collector.xml");
-        conf.addResource("query-mapping.xml");
-        conf.addResource("transformer-env.xml");
-
-        //处理参数
-        processArgs(conf, args);
-
-        //创建并设置Job
-        Job job = Job.getInstance(conf, this.getClass().getSimpleName());
-        //设置HBase输入Mapper的参数
-        //本地运行
-        TableMapReduceUtil.initTableMapperJob(initScan(job), NewMemberMapper.class, StatsUserDimension
-                .class, TimeOutputValue.class, job, false);
-        //设置Reduce相关参数
-        job.setReducerClass(NewMemberReducer.class);
-        job.setOutputKeyClass(StatsUserDimension.class);
-        job.setOutputValueClass(MapWritableValue.class);
-
-        //设置输出的相关参数
-        job.setOutputFormatClass(TransformerOutputFormat.class);
-        //运行MapReduce任务
-        if(job.waitForCompletion(true)){
-            //计算当天新增会员数MapReduce任务成功后，执行计算当天总会员数任务
-            new TotalMemberCalculate().calculateTotalMembers(conf);
-            return 0;
-        }
-        return 1;
+    /**
+     * 执行MapReduce Job之前运行的方法
+     *
+     * @param job
+     * @throws IOException
+     */
+    @Override
+    protected void beforeRunJob(Job job) throws IOException {
+        super.beforeRunJob(job);
+        // 每个统计维度一个reducer
+        job.setNumReduceTasks(2);
+        //设置分区类
+        job.setPartitionerClass(NewMemberPartitioner.class);
+        //设置不进行推测执行
+        job.setMapSpeculativeExecution(false);
+        job.setReduceSpeculativeExecution(false);
     }
 
     /**
-     * 初始化Scan集合
+     * 执行MapReduce Job之后运行的方法
      *
-     * @param job Scan集合所属的MapReduce Job
-     * @return Scan集合
+     * @param job   MapReduce Job
+     * @param error MapReduce Job运行过程中可能出现的异常
+     * @throws IOException
      */
-    private List<Scan> initScan(Job job) {
-        //获取HBase配置信息
-        Configuration config = job.getConfiguration();
-        //获取运行时间，格式为yyyy-MM-dd
-        String date = config.get(GlobalConstants.RUNNING_DATE_PARAMS);
-        //将日期字符串转换成时间戳格式
-        //起始
-        long startDate = TimeUtil.parseString2Long(date);
-        long endDate = startDate + GlobalConstants.MILLISECONDS_OF_DAY;
-        //时间戳 + ...
-        Scan scan = new Scan();
-        //设定HBase扫描的起始rowkey和结束rowkey
-        scan.setStartRow(Bytes.toBytes("" + startDate));
-        scan.setStopRow(Bytes.toBytes("" + endDate));
+    @Override
+    protected void afterRunJob(Job job, Throwable error) throws IOException {
+        try {
+            if (error == null && job.isSuccessful()) {
+                //MapReduce Job运行过程中没有出现异常，且运行成功
+                new TotalMemberCalculate().calculateTotalMembers(conf);
+            } else if (error == null) {
+                //MapReduce Job运行过程中没有出现异常，但运行失败
+                throw new RuntimeException("MapReduce Job运行失败");
+            }
+        } catch (Exception e) {
+            if (error != null) {
+                error = e;
+            }
+            throw new IOException("调用afterRunJob产生异常", e);
+        } finally {
+            super.afterRunJob(job, error);
+        }
+    }
 
+    /**
+     * 获取HBase的过滤器
+     *
+     * @return 过滤器
+     */
+    @Override
+    protected Filter fetchHbaseFilter() {
         //创建HBase的过滤器集合
         FilterList filterList = new FilterList();
         //添加过滤器
 
         //Map任务需要获取的列名
-        String[] columns = {EventLogConstants.LOG_COLUMN_NAME_MEMBER_ID, EventLogConstants
-                .LOG_COLUMN_NAME_SERVER_TIME, EventLogConstants.LOG_COLUMN_NAME_PLATFORM, EventLogConstants
-                .LOG_COLUMN_NAME_BROWSER_NAME, EventLogConstants.LOG_COLUMN_NAME_BROWSER_VERSION};
+        String[] columns = {EventLogConstants.LOG_COLUMN_NAME_MEMBER_ID, //会员ID
+                EventLogConstants.LOG_COLUMN_NAME_SERVER_TIME, //服务器时间
+                EventLogConstants.LOG_COLUMN_NAME_PLATFORM, //平台名称
+                EventLogConstants.LOG_COLUMN_NAME_BROWSER_NAME, //浏览器名称
+                EventLogConstants.LOG_COLUMN_NAME_BROWSER_VERSION //浏览器版本号
+        };
         //添加过滤器
         filterList.addFilter(getColumnFilter(columns));
-
-        //将过滤器添加到scan对象中
-        scan.setFilter(filterList);
-        //设置HBase表名
-        scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes
-                (EventLogConstants.HBASE_TABLE_NAME));
-        return Lists.newArrayList(scan);
+        return filterList;
     }
 
     /**
-     * 获取过滤给定列名的过滤器
-     *
-     * @param columns 列名集合
-     * @return
+     * 自定义分区类
      */
-    private Filter getColumnFilter(String[] columns) {
-        int length = columns.length;
-        byte[][] filter = new byte[length][];
-        for (int i = 0; i < length; i++) {
-            filter[i] = Bytes.toBytes(columns[i]);
-        }
-        //返回根据列名前缀匹配的过滤器
-        return new MultipleColumnPrefixFilter(filter);
-    }
+    public static class NewMemberPartitioner extends Partitioner<StatsUserDimension, TimeOutputValue> {
 
-    /**
-     * 处理参数
-     *
-     * @param conf
-     * @param args
-     */
-    private void processArgs(Configuration conf, String[] args) {
-        //时间格式字符串
-        String date = null;
-        for (int i = 0; i < args.length; i++) {
-            if ("-d".equals(args[i])) {
-                if (i + 1 < args.length) {
-                    //此时args[i]不是最后一个参数，从传入的参数中获取时间格式字符串
-                    date = args[++i];
-                    break;
-                }
+        public int getPartition(StatsUserDimension key, TimeOutputValue value, int numPartitions) {
+            KpiType kpi = KpiType.valueOfName(key.getStatsCommon().getKpi().getKpiName());
+            switch (kpi) {
+                case NEW_MEMBER:
+                    return 0;
+                case BROWSER_NEW_MEMBER:
+                    return 1;
+                default:
+                    throw new IllegalArgumentException("无法获取分区id，当前kpi:" + key.getStatsCommon().getKpi()
+                            .getKpiName() + "，当前reducer个数:" + numPartitions);
             }
         }
-
-        //判断date是否为空，以及其是否为有效的时间格式字符串
-        //要求date的格式为yyyy-MM-dd
-        if (StringUtils.isBlank(date) || !TimeUtil.isValidateRunningDate
-                (date)) {
-            //date为空或者是无效的时间格式字符串，使用默认时间
-            //默认时间是前一天
-            date = TimeUtil.getYesterday();
-
-        }
-        conf.set(GlobalConstants.RUNNING_DATE_PARAMS, date);
     }
 }
