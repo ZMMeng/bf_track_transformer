@@ -19,14 +19,12 @@ public class DimensionConverterImpl implements IDimensionConverter {
 
     //mysql jdbc四要素
     private static final String DRIVER = "com.mysql.jdbc.Driver";
-    private static final String URL =
-            "jdbc:mysql://hadoop:3306/report?useSSL=false";
+    private static final String URL = "jdbc:mysql://hadoop:3306/report?useSSL=false";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "root";
 
     //日志打印对象
-    private static final Logger logger = Logger.getLogger
-            (DimensionConverterImpl.class);
+    private static final Logger logger = Logger.getLogger(DimensionConverterImpl.class);
 
     //缓存BaseDimension对象信息
     //键为BaseDimension对象的类信息+字段值(id除外)，值为BaseDimension对象的id属性值
@@ -87,6 +85,12 @@ public class DimensionConverterImpl implements IDimensionConverter {
                 sqls = buildKpiSql();
             } else if (dimension instanceof LocationDimension) {
                 sqls = buildLocationSql();
+            } else if (dimension instanceof EventDimension) {
+                sqls = buildEventSql();
+            } else if (dimension instanceof CurrencyTypeDimension) {
+                sqls = buildCurrencyTypeSql();
+            } else if (dimension instanceof PaymentTypeDimension) {
+                sqls = buildPaymentTypeSql();
             } else {
                 throw new IOException("不支持此种dimension的id的获取：" + dimension.getClass());
             }
@@ -177,6 +181,31 @@ public class DimensionConverterImpl implements IDimensionConverter {
             sb.append(location.getCountry());
             sb.append(location.getProvince());
             sb.append(location.getCity());
+        } else if (dimension instanceof EventDimension) {
+            //dimension的类型是EventDimension
+            //类型信息
+            sb.append("event_dimension");
+            //强转
+            EventDimension event = (EventDimension) dimension;
+            //添加字段值(id除外)
+            sb.append(event.getCategory());
+            sb.append(event.getAction());
+        } else if (dimension instanceof CurrencyTypeDimension){
+            //dimension的类型是CurrencyTypeDimension
+            //类型信息
+            sb.append("currency_type_dimension");
+            //强转
+            CurrencyTypeDimension currencyType = (CurrencyTypeDimension) dimension;
+            //添加字段值(id除外)
+            sb.append(currencyType.getCurrencyName());
+        } else if (dimension instanceof PaymentTypeDimension){
+            //dimension的类型是PaymentTypeDimension
+            //类型信息
+            sb.append("payment_type_dimension");
+            //强转
+            PaymentTypeDimension paymentType = (PaymentTypeDimension) dimension;
+            //添加字段值(id除外)
+            sb.append(paymentType.getPaymentType());
         }
 
         //判断sb是否为空
@@ -231,6 +260,22 @@ public class DimensionConverterImpl implements IDimensionConverter {
             pstmt.setString(++i, location.getCountry());
             pstmt.setString(++i, location.getProvince());
             pstmt.setString(++i, location.getCity());
+        } else if (dimension instanceof EventDimension) {
+            //dimension的类型是EventDimension
+            //强转
+            EventDimension event = (EventDimension) dimension;
+            pstmt.setString(++i, event.getCategory());
+            pstmt.setString(++i, event.getAction());
+        } else if (dimension instanceof CurrencyTypeDimension){
+            //dimension的类型是CurrencyTypeDimension
+            //强转
+            CurrencyTypeDimension currencyType = (CurrencyTypeDimension) dimension;
+            pstmt.setString(++i, currencyType.getCurrencyName());
+        } else if(dimension instanceof PaymentTypeDimension){
+            //dimension的类型是PaymentTypeDimension
+            //强转
+            PaymentTypeDimension paymentType = (PaymentTypeDimension) dimension;
+            pstmt.setString(++i, paymentType.getPaymentType());
         }
     }
 
@@ -292,6 +337,39 @@ public class DimensionConverterImpl implements IDimensionConverter {
     }
 
     /**
+     * 创建event dimension的相关sql语句
+     *
+     * @return
+     */
+    private String[] buildEventSql() {
+        String querySql = "select id from dimension_event where category=? and action=?;";
+        String insertSql = "insert into dimension_event (category,action) values (?,?);";
+        return new String[]{querySql, insertSql};
+    }
+
+    /**
+     * 创建currency type dimension的相关sql语句
+     *
+     * @return
+     */
+    private String[] buildCurrencyTypeSql() {
+        String querySql = "select id from dimension_currency_type where currency_name=?;";
+        String insertSql = "insert into dimension_currency_type (currency_name) values (?);";
+        return new String[]{querySql, insertSql};
+    }
+
+    /**
+     * 创建payment type dimension的相关sql语句
+     *
+     * @return
+     */
+    private String[] buildPaymentTypeSql() {
+        String querySql = "select id from dimension_payment_type where payment_type=?;";
+        String insertSql = "insert into dimension_payment_type (payment_type) values (?);";
+        return new String[]{querySql, insertSql};
+    }
+
+    /**
      * 具体执行sql的方法
      *
      * @param conn
@@ -340,7 +418,7 @@ public class DimensionConverterImpl implements IDimensionConverter {
      * @throws IOException
      */
     public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
-        return IDimensionConverter.versionId;
+        return IDimensionConverter.versionID;
     }
 
     /**

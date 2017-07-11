@@ -4,7 +4,7 @@ import com.beifeng.transformer.model.dimension.basic.BaseDimension;
 import com.beifeng.transformer.service.rpc.IDimensionConverter;
 import com.beifeng.transformer.service.rpc.server.DimensionConverterImpl;
 import com.beifeng.transformer.service.rpc.server.DimensionConverterServer;
-import org.apache.commons.lang.StringUtils;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +52,7 @@ public class DimensionConverterClient {
     public static void stopDimensionConverterProxy(IDimensionConverter proxy) {
         if (proxy != null) {
             InnerDimensionConverterProxy innerProxy = (InnerDimensionConverterProxy) proxy;
-            RPC.stopProxy(innerProxy);
+            RPC.stopProxy(innerProxy.proxy);
         }
     }
 
@@ -114,10 +114,10 @@ public class DimensionConverterClient {
             }
         };
 
-        private static final long serialVersionUID = -731083744087467205L;
+        //private static final long serialVersionUID = -731083744087467205L;
 
         public InnerDimensionConverterProxy(Configuration conf, String address, int port) throws IOException {
-            this.proxy = RPC.getProxy(IDimensionConverter.class, IDimensionConverter.versionId, new
+            this.proxy = RPC.getProxy(IDimensionConverter.class, IDimensionConverter.versionID, new
                     InetSocketAddress(address, port), conf);
         }
 

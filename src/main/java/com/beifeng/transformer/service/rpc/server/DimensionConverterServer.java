@@ -36,15 +36,16 @@ public class DimensionConverterServer {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 try {
-                    DimensionConverterServer.this.removeListenerAddress();
+                    DimensionConverterServer.this.stopServer();
                 } catch (Exception e) {
                     //nothing
                 } finally {
-                    try{
+                    //必须要将此处注释，否则会报获取id异常，debug显示是无法获取代理对象，更深层次的原因就不清楚了
+                    /*try{
                         DimensionConverterServer.this.stopServer();
                     }catch (Exception e){
                         //nothing
-                    }
+                    }*/
 
                 }
             }
