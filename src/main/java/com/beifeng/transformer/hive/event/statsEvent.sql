@@ -116,7 +116,7 @@ group by pl,date,ca,ac;
 sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
 --username root \
 --password root \
---table stats_view_depth \
+--table stats_event \
 --export-dir /user/hive/warehouse/stats_event/* \
 --input-fields-terminated-by "\\01" \
 --update-mode allowinsert \

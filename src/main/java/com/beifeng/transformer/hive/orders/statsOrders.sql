@@ -48,7 +48,7 @@ values bigint,
 created string
 );
 
---订单数量(总)
+--6.编写hql订单数量(总)
 from(
 select
 pl,
@@ -144,3 +144,14 @@ payment_type_convert('all'),
 sum(values) as values,
 date
 group by date;
+
+--7.sqoop脚本(订单数量)
+sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
+--username root \
+--password root \
+--table stats_order \
+--export-dir /user/hive/warehouse/stats_order/* \
+--input-fields-terminated-by "\\01" \
+--update-mode allowinsert \
+--update-key platform_dimension_id,data_dimension_id,currency_type_dimension_id,payment_type_dimension_id
+--columns platform_dimension_id,data_dimension_id,currency_type_dimension_id,payment_type_dimension_id,orders,created
