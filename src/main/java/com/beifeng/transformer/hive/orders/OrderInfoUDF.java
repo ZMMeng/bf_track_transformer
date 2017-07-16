@@ -53,8 +53,9 @@ public class OrderInfoUDF extends UDF {
      * @param orderId
      * @param flag
      * @return
+     * @throws IllegalArgumentException
      */
-    public Text evaluate(Text orderId, Text flag) {
+    public Text evaluate(Text orderId, Text flag) throws IllegalArgumentException {
         if (orderId == null || flag == null || StringUtils.isBlank(orderId.toString().trim()) ||
                 StringUtils.isBlank(flag.toString().trim())) {
             throw new IllegalArgumentException("参数异常，订单id不能为空");
@@ -85,8 +86,9 @@ public class OrderInfoUDF extends UDF {
      *
      * @param orderId
      * @return
+     * @throws IllegalArgumentException
      */
-    public IntWritable evaluate(Text orderId) {
+    public IntWritable evaluate(Text orderId) throws IllegalArgumentException {
         if (orderId == null || StringUtils.isBlank(orderId.toString().trim())) {
             throw new IllegalArgumentException("参数异常，订单id不能为空");
         }
