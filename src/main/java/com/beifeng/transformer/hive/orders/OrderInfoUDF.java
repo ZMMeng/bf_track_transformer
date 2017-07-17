@@ -22,6 +22,8 @@ import java.util.Map;
 public class OrderInfoUDF extends UDF {
     //数据库连接
     private Connection conn = null;
+    //配置对象
+    private Configuration conf = null;
     //缓存
     private Map<String, InnerOrderInfo> cache = new LinkedHashMap<String, InnerOrderInfo>() {
         @Override
@@ -30,11 +32,15 @@ public class OrderInfoUDF extends UDF {
         }
     };
 
-    public OrderInfoUDF() {
-        Configuration conf = new Configuration();
-        conf.addResource("transformer-env.xml");
+    private void init(){
+        if(conf == null){
+            conf = new Configuration();
+            conf.addResource("transformer-env.xml");
+        }
         try {
-            conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+            if(conn == null) {
+                conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+            }
         } catch (SQLException e) {
             throw new RuntimeException("创建MySQL连接异常", e);
         }
@@ -56,6 +62,7 @@ public class OrderInfoUDF extends UDF {
      * @throws IllegalArgumentException
      */
     public Text evaluate(Text orderId, Text flag) throws IllegalArgumentException {
+        init();
         if (orderId == null || flag == null || StringUtils.isBlank(orderId.toString().trim()) ||
                 StringUtils.isBlank(flag.toString().trim())) {
             throw new IllegalArgumentException("参数异常，订单id不能为空");

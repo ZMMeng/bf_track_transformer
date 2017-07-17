@@ -435,7 +435,7 @@ order_info(oid,'pt') as pt,
 oid,
 max(cua) as amount
 from event_logs
-where en='e_cre' and
+where en='e_cs' and
 pl is not null and
 s_time>=unix_timestamp('2017-07-05','yyyy-MM-dd')*1000 and
 s_time<unix_timestamp('2017-07-06','yyyy-MM-dd')*1000
@@ -553,10 +553,10 @@ order_info(oid,'pt') as pt,
 oid,
 max(cua) as amount
 from event_logs
-where en='e_cre' and
+where en='e_cs' and
 pl is not null and
-s_time>=unix_timestamp('2017-07-12','yyyy-MM-dd')*1000 and
-s_time<unix_timestamp('2017-07-13','yyyy-MM-dd')*1000
+s_time>=unix_timestamp('2017-07-05','yyyy-MM-dd')*1000 and
+s_time<unix_timestamp('2017-07-06','yyyy-MM-dd')*1000
 group by order_info(oid,'pl'),from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd'),order_info(oid,'cut'),order_info(oid,'pt'),oid
 ) as tmp1
 select
@@ -662,6 +662,362 @@ date
 group by date;
 
 --16.sqoop脚本(迄今为止支付成功订单总金额)
+sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
+--username root \
+--password root \
+--table stats_order \
+--export-dir /user/hive/warehouse/stats_order_tmp2/* \
+--input-fields-terminated-by "\\01" \
+--update-mode allowinsert \
+--update-key platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id \
+--columns platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id,total_revenue_amount,created
+
+--17.编写hql(退款订单数量)
+from(
+select
+order_info(oid,'pl') as pl,
+from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+order_info(oid,'cut') as cut,
+order_info(oid,'pt') as pt,
+count(distinct oid) as orders
+from event_logs
+where en='e_cr' and
+pl is not null and
+s_time>=unix_timestamp('2017-07-05','yyyy-MM-dd')*1000 and
+s_time<unix_timestamp('2017-07-06','yyyy-MM-dd')*1000
+group by order_info(oid,'pl'),from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd'),order_info(oid,'cut'),order_info(oid,'pt')
+) as tmp
+insert overwrite table stats_order_tmp1
+select pl,date,cut,pt,orders
+insert overwrite table stats_order_tmp2
+select platform_convert(pl),date_convert(date),currency_type_convert(cut),payment_type_convert(pt),orders,date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by date,cut,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by pl,date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by pl,date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by pl,date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by date;
+
+--18.sqoop脚本(退款订单数量)
+sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
+--username root \
+--password root \
+--table stats_order \
+--export-dir /user/hive/warehouse/stats_order_tmp2/* \
+--input-fields-terminated-by "\\01" \
+--update-mode allowinsert \
+--update-key platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id \
+--columns platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id,refund_orders,created
+
+--19.编写hql(退款订单金额)
+from(
+from(
+select
+order_info(oid,'pl') as pl,
+from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+order_info(oid,'cut') as cut,
+order_info(oid,'pt') as pt,
+oid,
+max(order_info(oid)) as amount
+from event_logs
+where en='e_cr' and
+pl is not null and
+s_time>=unix_timestamp('2017-07-05','yyyy-MM-dd')*1000 and
+s_time<unix_timestamp('2017-07-06','yyyy-MM-dd')*1000
+group by order_info(oid,'pl'),from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd'),order_info(oid,'cut'),order_info(oid,'pt'),oid
+) as tmp1
+select
+pl,
+date,
+cut,
+pt,
+sum(amount) as amount
+group by pl,date,cut,pt
+) as tmp2
+insert overwrite table stats_order_tmp1
+select pl,date,cut,pt,amount
+insert overwrite table stats_order_tmp2
+select platform_convert(pl),date_convert(date),currency_type_convert(cut),payment_type_convert(pt),amount,date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by date,cut,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by pl,date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by pl,date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+sum(values) as amount,
+date
+group by date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by pl,date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+sum(values) as amount,
+date
+group by date;
+
+--20.sqoop脚本(退款订单金额)
+sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
+--username root \
+--password root \
+--table stats_order \
+--export-dir /user/hive/warehouse/stats_order_tmp2/* \
+--input-fields-terminated-by "\\01" \
+--update-mode allowinsert \
+--update-key platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id \
+--columns platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id,refund_amount,created
+
+--21.编写hql(迄今为止退款订单总金额)
+from(
+from(
+select
+order_info(oid,'pl') as pl,
+from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+order_info(oid,'cut') as cut,
+order_info(oid,'pt') as pt,
+oid,
+max(order_info(oid)) as amount
+from event_logs
+where en='e_cr' and
+pl is not null and
+s_time>=unix_timestamp('2017-07-05','yyyy-MM-dd')*1000 and
+s_time<unix_timestamp('2017-07-06','yyyy-MM-dd')*1000
+group by order_info(oid,'pl'),from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd'),order_info(oid,'cut'),order_info(oid,'pt'),oid
+) as tmp1
+select
+pl,
+date,
+cut,
+pt,
+sum(amount) as amount
+group by pl,date,cut,pt
+) as tmp2
+insert overwrite table stats_order_tmp1
+select pl,date,cut,pt,amount
+insert overwrite table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert(pt),
+order_total_amount(platform_convert(pl),date_convert(date),currency_type_convert(cut),payment_type_convert(pt),cast(amount as int),'refund') as amount,
+date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert(pt),
+order_total_amount(platform_convert('all'),date_convert(date),currency_type_convert(cut),payment_type_convert(pt),cast(sum(values) as int),'refund') as amount,
+date
+group by date,cut,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+order_total_amount(platform_convert(pl),date_convert(date),currency_type_convert('all'),payment_type_convert
+(pt),cast(sum(values) as int),'refund') as amount,
+date
+group by pl,date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+order_total_amount(platform_convert(pl),date_convert(date),currency_type_convert(cut),payment_type_convert
+('all'),cast(sum(values) as int),'refund') as amount,
+date
+group by pl,date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert(pt),
+order_total_amount(platform_convert('all'),date_convert(date),currency_type_convert('all'),
+payment_type_convert(pt),cast(sum(values) as int),'refund') as amount,
+date
+group by date,pt;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert(cut),
+payment_type_convert('all'),
+order_total_amount(platform_convert('all'),date_convert(date),currency_type_convert(cut),
+payment_type_convert('all'),cast(sum(values) as int),'refund') as amount,
+date
+group by date,cut;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert(pl),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+order_total_amount(platform_convert(pl),date_convert(date),currency_type_convert('all'),
+payment_type_convert('all'),cast(sum(values) as int),'refund') as amount,
+date
+group by pl,date;
+
+from stats_order_tmp1
+insert into table stats_order_tmp2
+select
+platform_convert('all'),
+date_convert(date),
+currency_type_convert('all'),
+payment_type_convert('all'),
+order_total_amount(platform_convert('all'),date_convert(date),currency_type_convert('all'),
+payment_type_convert('all'),cast(sum(values) as int),'refund') as amount,
+date
+group by date;
+
+--22.sqoop脚本(迄今为止支付成功订单总金额)
 sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
 --username root \
 --password root \

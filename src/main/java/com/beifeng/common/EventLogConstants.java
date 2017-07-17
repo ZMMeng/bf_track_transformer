@@ -18,11 +18,11 @@ public class EventLogConstants {
         //页面浏览事件
         PAGEVIEW(2, "page view event", "e_pv"),
         //订单生成事件
-        CHARGREQUEST(3, "charge request event", "e_crt"),
+        CHARGREQUEST(3, "charge request event", "e_cre"),
         //订单成功支付事件
         CHARGESUCCESS(4, "charge success event", "e_cs"),
         //订单退款事件
-        CHARGEREFUND(5, "charge refund event", "e_cre"),
+        CHARGEREFUND(5, "charge refund event", "e_cr"),
         //自定义事件
         EVENT(6, "event duration event", "ede");
 
