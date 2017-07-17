@@ -433,7 +433,7 @@ from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
 order_info(oid,'cut') as cut,
 order_info(oid,'pt') as pt,
 oid,
-max(cua) as amount
+max(order_info(oid)) as amount
 from event_logs
 where en='e_cs' and
 pl is not null and
@@ -551,7 +551,7 @@ from_unixtime(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
 order_info(oid,'cut') as cut,
 order_info(oid,'pt') as pt,
 oid,
-max(cua) as amount
+max(order_info(oid)) as amount
 from event_logs
 where en='e_cs' and
 pl is not null and
