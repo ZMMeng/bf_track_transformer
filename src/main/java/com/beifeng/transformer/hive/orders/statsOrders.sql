@@ -1026,4 +1026,5 @@ sqoop export --connect jdbc:mysql://hadoop:3306/report?useSSL=false \
 --input-fields-terminated-by "\\01" \
 --update-mode allowinsert \
 --update-key platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id \
---columns platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id,total_revenue_amount,created
+--columns platform_dimension_id,date_dimension_id,currency_type_dimension_id,payment_type_dimension_id,
+-- total_refund_amount,created
