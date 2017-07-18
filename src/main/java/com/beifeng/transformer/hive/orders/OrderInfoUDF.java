@@ -21,18 +21,18 @@ import java.util.Map;
  */
 public class OrderInfoUDF extends UDF {
     //数据库连接
-    private Connection conn = null;
+    private static Connection conn = null;
     //配置对象
-    private Configuration conf = null;
+    private static Configuration conf = null;
     //缓存
-    private Map<String, InnerOrderInfo> cache = new LinkedHashMap<String, InnerOrderInfo>() {
+    private static Map<String, InnerOrderInfo> cache = new LinkedHashMap<String, InnerOrderInfo>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, InnerOrderInfo> eldest) {
             return cache.size() > 100;
         }
     };
 
-    private void init(){
+    private static void init(){
         if(conf == null){
             conf = new Configuration();
             conf.addResource("transformer-env.xml");
@@ -112,7 +112,7 @@ public class OrderInfoUDF extends UDF {
      * @param orderId
      * @return
      */
-    private InnerOrderInfo fetchInnerOrderInfo(String orderId) {
+    private static InnerOrderInfo fetchInnerOrderInfo(String orderId) {
         InnerOrderInfo info = cache.get(orderId);
         if (info != null) {
             return info;
@@ -134,6 +134,7 @@ public class OrderInfoUDF extends UDF {
                 info.setPaymentType(rs.getString("payment_type"));
                 info.setsTime(rs.getLong("s_time"));
                 info.setAmount(rs.getInt("amount"));
+                cache.put(orderId, info);
             }
             return info;
         } catch (SQLException e) {

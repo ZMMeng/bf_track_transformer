@@ -22,20 +22,27 @@ import java.util.Map;
  * Created by Administrator on 2017/7/12.
  */
 public class OrderTotalAmountUDF extends UDF {
-    private Connection conn = null;
+    //数据库连接对象
+    private static Connection conn = null;
+    //配置对象
+    private static Configuration conf = null;
 
-    private Map<String, Integer> cache = new LinkedHashMap<String, Integer>() {
+    private static Map<String, Integer> cache = new LinkedHashMap<String, Integer>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
             return this.size() > 100;
         }
     };
 
-    public OrderTotalAmountUDF() {
-        Configuration conf = new Configuration();
-        conf.addResource("transformer-env.xml");
+    private static void init() {
+        if (conf == null) {
+            conf = new Configuration();
+            conf.addResource("transformer-env.xml");
+        }
         try {
-            conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+            if (conn == null) {
+                conn = JdbcManager.getConnection(conf, GlobalConstants.WAREHOUSE_OF_REPORT);
+            }
         } catch (SQLException e) {
             throw new RuntimeException("创建MySQL连接异常", e);
         }
@@ -66,7 +73,7 @@ public class OrderTotalAmountUDF extends UDF {
                 (flag.toString().trim())) {
             throw new IllegalArgumentException("参数异常，订单id不能为空");
         }
-
+        init();
         String str = flag.toString();
         if ("revenue".equals(str)) {
             return new IntWritable(evaluateTotalRevenueAmount(platformDimensionId.get(), dateDimensionId
@@ -100,16 +107,15 @@ public class OrderTotalAmountUDF extends UDF {
             return amount;
         }
 
-        PreparedStatement pstmt;
-        ResultSet rs;
-
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
             //1. 获取当前日期的前一天的id
             int lastDateDimensionId = fetchLastDateDimensionId(dateDimensionId);
             //2. 前一天日期的id不是-1，那么获取对应的总订单金额
             int lastTotalRevenueAmount = 0;
             if (lastDateDimensionId != -1) {
-                pstmt = conn.prepareStatement("select total_revenue_amount from stats_orders where " +
+                pstmt = conn.prepareStatement("select total_revenue_amount from stats_order where " +
                         "platform_dimension_id=? and date_dimension_id=? and currency_type_dimension_id=? " +
                         "and payment_type_dimension_id=?");
                 int i = 0;
@@ -152,17 +158,15 @@ public class OrderTotalAmountUDF extends UDF {
             return amount;
         }
 
-        PreparedStatement pstmt;
-        ResultSet rs;
-
-
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
             //1. 获取当前日期的前一天的id
             int lastDateDimensionId = fetchLastDateDimensionId(dateDimensionId);
             //2. 前一天日期的id不是-1，那么获取对应的总订单金额
             int lastTotalRefundAmount = 0;
             if (lastDateDimensionId != -1) {
-                pstmt = conn.prepareStatement("select total_refund_amount from stats_orders where " +
+                pstmt = conn.prepareStatement("select total_refund_amount from stats_order where " +
                         "platform_dimension_id=? and date_dimension_id=? and currency_type_dimension_id=? " +
                         "and payment_type_dimension_id=?");
                 int i = 0;
@@ -182,8 +186,6 @@ public class OrderTotalAmountUDF extends UDF {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-
         return 0;
     }
 
